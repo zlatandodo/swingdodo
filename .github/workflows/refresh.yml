@@ -1,0 +1,36 @@
+name: Refresh Dashboard
+
+on:
+  workflow_dispatch:        # bottone manuale su GitHub
+  schedule:
+    - cron: '0 7 * * 1-5'  # ogni mattina lun-ven alle 07:00 UTC
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Generate dashboard
+        env:
+          ASKLIVERMORE_EMAIL: ${{ secrets.ASKLIVERMORE_EMAIL }}
+          ASKLIVERMORE_PASSWORD: ${{ secrets.ASKLIVERMORE_PASSWORD }}
+        run: python tools/generate_dashboard.py
+
+      - name: Commit & push dashboard.html
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add dashboard.html
+          git diff --cached --quiet || git commit -m "chore: refresh dashboard $(date -u '+%Y-%m-%d %H:%M UTC')"
+          git push

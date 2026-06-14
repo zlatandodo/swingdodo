@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dodo Weekly Scanner</title>
+<style>
+  :root {
+    --bg: #0f1117; --surface: #1a1d27; --border: #2a2d3a;
+    --text: #e2e8f0; --muted: #64748b; --accent: #f97316;
+    --green: #22c55e; --red: #ef4444;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 13px; }
+
+  /* HEADER */
+  header { background: var(--surface); border-bottom: 1px solid var(--border);
+           padding: 14px 24px; display: flex; align-items: center; gap: 14px; }
+  header h1 { font-size: 17px; font-weight: 700; color: var(--accent); }
+  .badge { background: var(--accent); color: #000; padding: 2px 10px;
+           border-radius: 20px; font-size: 11px; font-weight: 700; }
+  .meta { color: var(--muted); font-size: 12px; margin-left: auto; }
+
+  /* TABS */
+  .tabs { display: flex; gap: 0; background: var(--surface); border-bottom: 2px solid var(--border); padding: 0 24px; }
+  .tab-btn { padding: 12px 20px; cursor: pointer; font-size: 13px; font-weight: 600;
+             color: var(--muted); border: none; background: none; border-bottom: 2px solid transparent;
+             margin-bottom: -2px; transition: all .15s; }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* CONTROLS */
+  .controls { padding: 12px 24px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+              background: var(--surface); border-bottom: 1px solid var(--border); }
+  .controls label { color: var(--muted); font-size: 11px; text-transform: uppercase;
+                    letter-spacing: .05em; margin-right: 2px; }
+  .sort-btn { background: var(--border); border: 1px solid #3a3d4a; color: var(--text);
+              padding: 5px 14px; border-radius: 6px; cursor: pointer; font-size: 12px;
+              font-weight: 600; transition: all .15s; }
+  .sort-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .sort-btn.active { background: var(--accent); border-color: var(--accent); color: #000; }
+  .sep { width: 1px; height: 24px; background: var(--border); margin: 0 6px; }
+  .filter-btn { background: transparent; border: 1px solid var(--border); color: var(--muted);
+                padding: 4px 10px; border-radius: 20px; cursor: pointer; font-size: 11px; transition: all .15s; }
+  .filter-btn:hover { border-color: var(--text); color: var(--text); }
+  .filter-btn.active { border-color: var(--accent); color: var(--accent); }
+  .count { color: var(--muted); font-size: 12px; margin-left: auto; }
+
+  /* INFO BAR */
+  .info-bar { background: rgba(249,115,22,.07); border-bottom: 1px solid rgba(249,115,22,.15);
+              padding: 8px 24px; display: flex; gap: 24px; flex-wrap: wrap; font-size: 11px; color: var(--muted); }
+  .info-bar strong { color: var(--accent); }
+
+  /* TABLES */
+  .table-wrap { overflow-x: auto; padding: 0 24px 40px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 16px; min-width: 900px; }
+  th { background: var(--surface); color: var(--muted); font-size: 11px; text-transform: uppercase;
+       letter-spacing: .05em; padding: 10px 12px; text-align: right;
+       border-bottom: 2px solid var(--border); white-space: nowrap; cursor: pointer; user-select: none; }
+  th:first-child, th:nth-child(2) { text-align: left; }
+  th:hover { color: var(--accent); }
+  th.sorted { color: var(--accent); }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--border); text-align: right; white-space: nowrap; }
+  td:first-child { text-align: center; color: var(--muted); font-weight: 700; width: 40px; }
+  td:nth-child(2) { text-align: left; font-weight: 600; max-width: 240px; overflow: hidden; text-overflow: ellipsis; }
+  tr:hover td { background: rgba(249,115,22,.05); }
+
+  /* VALUE COLORS */
+  .pos { color: var(--green); } .neg { color: var(--red); } .zero { color: var(--muted); }
+  .score-hi  { color: var(--green); font-weight: 700; font-size: 14px; }
+  .score-mid { color: #eab308; font-weight: 700; font-size: 14px; }
+  .score-lo  { color: var(--muted); font-weight: 700; font-size: 14px; }
+  .score-neg { color: var(--red); font-weight: 700; font-size: 14px; }
+
+  /* BADGES */
+  .bc { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+  .bc-vu { background: rgba(34,197,94,.15);  color: #22c55e; }
+  .bc-u  { background: rgba(132,204,22,.15); color: #84cc16; }
+  .bc-m  { background: rgba(234,179,8,.15);  color: #eab308; }
+  .bc-c  { background: rgba(239,68,68,.15);  color: #ef4444; }
+  .bt    { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 10px;
+           background: rgba(99,102,241,.15); color: #818cf8; }
+  .bs    { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px;
+           background: rgba(249,115,22,.15); color: var(--accent); margin: 1px; }
+  .bth   { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px;
+           background: rgba(34,197,94,.1); color: #4ade80; margin: 1px; }
+
+  /* SCANNER COUNT STARS */
+  .sc-dots { letter-spacing: 1px; }
+  .sc-5plus { color: #f59e0b; }
+  .sc-3 { color: var(--green); }
+  .sc-2 { color: #60a5fa; }
+  .sc-1 { color: var(--muted); }
+
+  /* TICKER LINK */
+  a.tv-link { color: inherit; text-decoration: none; }
+  a.tv-link:hover { color: var(--accent); text-decoration: underline; }
+  .chart-btn { background: none; border: 1px solid var(--border); color: var(--muted);
+               border-radius: 4px; padding: 1px 6px; font-size: 10px; cursor: pointer;
+               margin-left: 4px; transition: all .15s; }
+  .chart-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* TRADINGVIEW MODAL */
+  #tv-modal { display: none; position: fixed; inset: 0; z-index: 1000;
+              background: rgba(0,0,0,.75); align-items: center; justify-content: center; }
+  #tv-modal.open { display: flex; }
+  #tv-modal-inner { background: var(--surface); border: 1px solid var(--border);
+                    border-radius: 10px; width: 900px; max-width: 96vw; overflow: hidden; }
+  #tv-modal-header { display: flex; align-items: center; padding: 12px 16px;
+                     border-bottom: 1px solid var(--border); }
+  #tv-modal-title { font-weight: 700; color: var(--accent); font-size: 14px; }
+  #tv-modal-links { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+  #tv-modal-links a { color: var(--muted); font-size: 11px; text-decoration: none; }
+  #tv-modal-links a:hover { color: var(--accent); }
+  #tv-close { background: none; border: none; color: var(--muted); font-size: 20px;
+              cursor: pointer; padding: 0 4px; margin-left: 12px; }
+  #tv-close:hover { color: var(--text); }
+  #tv-frame { width: 100%; height: 500px; border: none; display: block; }
+
+  /* CONFIG TAB */
+  #tab-config { padding: 24px; }
+  .cfg-section { background: var(--surface); border: 1px solid var(--border);
+                 border-radius: 8px; padding: 16px 20px; margin-bottom: 20px; }
+  .cfg-section h3 { font-size: 13px; font-weight: 700; color: var(--accent);
+                    margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+  .cfg-presets { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+  .preset-btn { background: var(--border); border: 1px solid #3a3d4a; color: var(--text);
+                padding: 4px 12px; border-radius: 6px; cursor: pointer; font-size: 11px;
+                font-weight: 600; transition: all .15s; }
+  .preset-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .cfg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 6px; }
+  .cfg-item { display: flex; align-items: center; gap: 8px; padding: 5px 8px;
+              border-radius: 4px; cursor: pointer; }
+  .cfg-item:hover { background: rgba(249,115,22,.05); }
+  .cfg-item input[type=checkbox] { accent-color: var(--accent); width: 14px; height: 14px; cursor: pointer; }
+  .cfg-item span { font-size: 12px; }
+  .cfg-rank { color: var(--muted); font-size: 10px; margin-left: auto; }
+  .cfg-apply { background: var(--accent); color: #000; border: none; padding: 10px 28px;
+               border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer;
+               transition: opacity .15s; }
+  .cfg-apply:hover { opacity: .85; }
+  .cfg-summary { color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>&#x1F4CA; Dodo Weekly Scanner</h1>
+  <span class="badge">Swing Trading</span>
+  <span class="meta">Dati al: <strong id="asof"></strong> &nbsp;&mdash;&nbsp; <span id="total-themes"></span> temi &nbsp;|&nbsp; <span id="total-crossref"></span> titoli in incrocio</span>
+</header>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab-btn active" data-tab="themes">&#x1F4C8; Theme Momentum</button>
+  <button class="tab-btn" data-tab="crossref">&#x1F3AF; Cross-Reference Titoli</button>
+  <button class="tab-btn" data-tab="config">&#x2699;&#xFE0F; Configura</button>
+</div>
+
+<!-- ===== TAB 1: THEME MOMENTUM ===== -->
+<div id="tab-themes" class="tab-panel active">
+  <div class="controls">
+    <label>Ordina per:</label>
+    <button class="sort-btn active" data-col="score" data-table="themes">&#x2B50; Ponderata</button>
+    <button class="sort-btn" data-col="1m" data-table="themes">1 Mese</button>
+    <button class="sort-btn" data-col="3m" data-table="themes">3 Mesi</button>
+    <button class="sort-btn" data-col="1w" data-table="themes">1 Settimana</button>
+    <button class="sort-btn" data-col="1d" data-table="themes">1 Giorno</button>
+    <div class="sep"></div>
+    <label>Crowding:</label>
+    <button class="filter-btn active" data-crowd="all">Tutti</button>
+    <button class="filter-btn" data-crowd="very-uncrowded">Very Uncrowded</button>
+    <button class="filter-btn" data-crowd="uncrowded">Uncrowded</button>
+    <button class="filter-btn" data-crowd="moderate">Moderate</button>
+    <button class="filter-btn" data-crowd="crowded">Crowded</button>
+    <span class="count" id="themes-count"></span>
+  </div>
+  <div class="info-bar">
+    <span>Ponderazione Claude Swing &mdash;</span>
+    <span><strong>1M = 40%</strong> Motore momentum</span>
+    <span><strong>3M = 25%</strong> Trend strutturale</span>
+    <span><strong>1W = 25%</strong> Timing tattico</span>
+    <span><strong>1D = 10%</strong> Trigger operativo</span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Tema</th>
+          <th data-col="score" data-table="themes" class="sorted">Score &#x2B50; &#x25BC;</th>
+          <th data-col="1m" data-table="themes">Perf 1M</th>
+          <th data-col="3m" data-table="themes">Perf 3M</th>
+          <th data-col="1w" data-table="themes">Perf 1W</th>
+          <th data-col="1d" data-table="themes">Perf 1D</th>
+          <th>Crowding</th>
+          <th>Tipo</th>
+          <th data-col="avg_ta" data-table="themes">TA</th>
+          <th data-col="avg_fa" data-table="themes">FA</th>
+          <th data-col="avg_ars" data-table="themes">ARS</th>
+          <th data-col="stock_count" data-table="themes">Titoli</th>
+        </tr>
+      </thead>
+      <tbody id="tbody-themes"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== TAB 2: CROSS-REFERENCE ===== -->
+<div id="tab-crossref" class="tab-panel">
+  <div class="controls">
+    <label>Ordina per:</label>
+    <button class="sort-btn active" data-col="scanner_count" data-table="crossref">&#x1F3AF; N. Scanner</button>
+    <button class="sort-btn" data-col="best_theme_rank" data-table="crossref">Rank Tema</button>
+    <button class="sort-btn" data-col="ta_rating" data-table="crossref">TA Rating</button>
+    <button class="sort-btn" data-col="fa_rating" data-table="crossref">FA Rating</button>
+    <button class="sort-btn" data-col="rs_rating" data-table="crossref">RS Rating</button>
+    <button class="sort-btn" data-col="change_pct" data-table="crossref">Perf 1D</button>
+    <div class="sep"></div>
+    <label>Min scanner:</label>
+    <button class="filter-btn active" data-min="1">1+</button>
+    <button class="filter-btn" data-min="2">2+</button>
+    <button class="filter-btn" data-min="3">3+</button>
+    <button class="filter-btn" data-min="4">4+</button>
+    <span class="count" id="crossref-count"></span>
+  </div>
+  <div class="info-bar" id="crossref-info-bar">
+    <span>Titoli nei temi selezionati AND in almeno uno degli scanner selezionati &mdash;</span>
+    <span>Modifica la selezione nella tab <strong>&#x2699;&#xFE0F; Configura</strong></span>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Ticker / Nome</th>
+          <th data-col="scanner_count" data-table="crossref" class="sorted">Scanner &#x25BC;</th>
+          <th data-col="best_theme_rank" data-table="crossref">Rank Tema</th>
+          <th data-col="theme_count" data-table="crossref">N.Temi</th>
+          <th data-col="ta_rating" data-table="crossref">TA</th>
+          <th data-col="fa_rating" data-table="crossref">FA</th>
+          <th data-col="rs_rating" data-table="crossref">RS</th>
+          <th data-col="price" data-table="crossref">Prezzo</th>
+          <th data-col="change_pct" data-table="crossref">1D %</th>
+          <th>Scanner attivi</th>
+          <th>Temi (top)</th>
+        </tr>
+      </thead>
+      <tbody id="tbody-crossref"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== TAB 3: CONFIG ===== -->
+<div id="tab-config" class="tab-panel">
+
+  <div class="cfg-section">
+    <h3>&#x1F4CA; Temi da includere nel cross-reference
+      <span class="cfg-summary" id="cfg-theme-summary"></span>
+    </h3>
+    <div class="cfg-presets">
+      <button class="preset-btn" onclick="selectTopThemes(10)">Top 10</button>
+      <button class="preset-btn" onclick="selectTopThemes(20)">Top 20</button>
+      <button class="preset-btn" onclick="selectTopThemes(30)">Top 30</button>
+      <button class="preset-btn" onclick="selectTopThemes(50)">Top 50</button>
+      <button class="preset-btn" onclick="selectAllThemes(true)">Tutti</button>
+      <button class="preset-btn" onclick="selectAllThemes(false)">Nessuno</button>
+    </div>
+    <div class="cfg-grid" id="cfg-themes-grid"></div>
+  </div>
+
+  <div class="cfg-section">
+    <h3>&#x1F50D; Scanner da includere
+      <span class="cfg-summary" id="cfg-scanner-summary"></span>
+    </h3>
+    <div class="cfg-presets">
+      <button class="preset-btn" onclick="selectAllScanners(true)">Tutti</button>
+      <button class="preset-btn" onclick="selectAllScanners(false)">Nessuno</button>
+    </div>
+    <div class="cfg-grid" id="cfg-scanners-grid"></div>
+  </div>
+
+  <button class="cfg-apply" onclick="applyConfig()">&#x2714; Aggiorna Cross-Reference</button>
+</div>
+
+<!-- TRADINGVIEW MODAL -->
+<div id="tv-modal">
+  <div id="tv-modal-inner">
+    <div id="tv-modal-header">
+      <span id="tv-modal-title"></span>
+      <div id="tv-modal-links">
+        <a id="tv-modal-ext" href="#" target="_blank">&#x1F517; Apri in TradingView</a>
+      </div>
+      <button id="tv-close" onclick="closeChart()">&#x2715;</button>
+    </div>
+    <iframe id="tv-frame" src="about:blank" allowfullscreen></iframe>
+  </div>
+</div>
+
+<script>
+const THEMES_DATA   = __THEMES_DATA__;
+const CROSSREF_DATA = __CROSSREF_DATA__;
+const THEMES_FULL   = __THEMES_FULL_DATA__;
+const SCANNERS_RAW  = __SCANNERS_RAW_DATA__;
+
+const SCANNER_LABELS = {
+  "bull-flag":              "Bull Flag",
+  "golden-pocket":          "Golden Pocket",
+  "vcp":                    "VCP | Minervini",
+  "ascending-triangle":     "Ascending Triangle",
+  "pocket-pivot":           "Pocket Pivot",
+  "peg-flag":               "PEG Flag",
+  "insider-buying":         "Insider Buying",
+  "volume-surge":           "Volume Surge",
+  "inverse-head-shoulders": "Inv. H&S",
+  "rsi-oversold":           "RSI Oversold",
+  "livermore-pivotal":      "Livermore Pivotal",
+  "livermore-buy-the-dip":  "Buy the Dip",
+};
+
+// ---- STATE ----
+var themeSort  = { col: 'score',         dir: -1 };
+var crossSort  = { col: 'scanner_count', dir: -1 };
+var crowdFilter = 'all';
+var minScanner  = 1;
+
+// Config state: which themes/scanners are selected
+var selectedThemeIds   = {};
+var selectedScannerIds = {};
+
+// Working crossref data (recomputed on config apply)
+var currentCrossref = CROSSREF_DATA.slice();
+
+// ---- TABS ----
+document.querySelectorAll('.tab-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+    document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ---- HELPERS ----
+function fmtPct(v) {
+  if (v === 0 || v === null || v === undefined) return '<span class="zero">0.0%</span>';
+  var cls = v > 0 ? 'pos' : 'neg';
+  return '<span class="' + cls + '">' + (v > 0 ? '+' : '') + v.toFixed(1) + '%</span>';
+}
+function scoreClass(s) {
+  if (s >= 15) return 'score-hi';
+  if (s >= 5)  return 'score-mid';
+  if (s >= 0)  return 'score-lo';
+  return 'score-neg';
+}
+function crowdBadge(c) {
+  var key = (c||'').replace(/_/g,'-');
+  var map = {'very-uncrowded':'bc-vu','uncrowded':'bc-u','moderate':'bc-m','crowded':'bc-c'};
+  return '<span class="bc ' + (map[key]||'bc-m') + '">' + key + '</span>';
+}
+function scDots(n) {
+  var cls = n >= 5 ? 'sc-5plus' : n >= 3 ? 'sc-3' : n === 2 ? 'sc-2' : 'sc-1';
+  return '<span class="sc-dots ' + cls + '">' + '&#x25CF;'.repeat(n) + '</span> ' + n;
+}
+function updateHeader(tableKey, col, dir) {
+  document.querySelectorAll('th[data-table="' + tableKey + '"]').forEach(function(h) {
+    h.classList.remove('sorted');
+    h.textContent = h.textContent.replace(' ▼','').replace(' ▲','');
+  });
+  var th = document.querySelector('th[data-table="' + tableKey + '"][data-col="' + col + '"]');
+  if (th) { th.classList.add('sorted'); th.textContent += (dir === -1 ? ' ▼' : ' ▲'); }
+}
+
+// ---- TRADINGVIEW ----
+function openChart(tvSymbol, ticker) {
+  var modal = document.getElementById('tv-modal');
+  var frame = document.getElementById('tv-frame');
+  var extLink = document.getElementById('tv-modal-ext');
+  var title = document.getElementById('tv-modal-title');
+  var sym = tvSymbol || ticker;
+  title.textContent = sym;
+  var embedUrl = 'https://s.tradingview.com/widgetembed/?symbol=' + encodeURIComponent(sym) +
+    '&interval=D&theme=dark&style=1&locale=en&toolbar_bg=%23151820&hide_top_toolbar=0&hide_legend=0&saveimage=1&calendar=0&studies=%5B%5D&show_popup_button=1';
+  frame.src = embedUrl;
+  extLink.href = 'https://www.tradingview.com/chart/?symbol=' + encodeURIComponent(sym);
+  modal.classList.add('open');
+}
+function closeChart() {
+  document.getElementById('tv-modal').classList.remove('open');
+  document.getElementById('tv-frame').src = 'about:blank';
+}
+document.getElementById('tv-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeChart();
+});
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeChart(); });
+
+// ---- RENDER THEMES ----
+function renderThemes() {
+  var rows = THEMES_DATA.slice();
+  if (crowdFilter !== 'all') {
+    rows = rows.filter(function(r){ return (r.crowding||'').replace(/_/g,'-') === crowdFilter; });
+  }
+  rows.sort(function(a,b){
+    var av = a[themeSort.col], bv = b[themeSort.col];
+    return themeSort.dir * (av - bv);
+  });
+  document.getElementById('tbody-themes').innerHTML = rows.map(function(r, i) {
+    return '<tr>' +
+      '<td>' + (i+1) + '</td>' +
+      '<td title="' + r.name + '">' + r.name + '</td>' +
+      '<td class="' + scoreClass(r.score) + '">' + r.score.toFixed(1) + '</td>' +
+      '<td>' + fmtPct(r['1m']) + '</td>' +
+      '<td>' + fmtPct(r['3m']) + '</td>' +
+      '<td>' + fmtPct(r['1w']) + '</td>' +
+      '<td>' + fmtPct(r['1d']) + '</td>' +
+      '<td>' + crowdBadge(r.crowding) + '</td>' +
+      '<td><span class="bt">' + (r.theme_type||'') + '</span></td>' +
+      '<td>' + (r.avg_ta||0).toFixed(1) + '</td>' +
+      '<td>' + (r.avg_fa||0).toFixed(1) + '</td>' +
+      '<td>' + (r.avg_ars||0).toFixed(0) + '</td>' +
+      '<td>' + (r.stock_count||0) + '</td>' +
+    '</tr>';
+  }).join('');
+  document.getElementById('themes-count').textContent = rows.length + ' temi';
+}
+
+// ---- RENDER CROSSREF ----
+function renderCrossref() {
+  var rows = currentCrossref.filter(function(r){ return r.scanner_count >= minScanner; });
+  rows.sort(function(a,b){
+    var av = a[crossSort.col], bv = b[crossSort.col];
+    return crossSort.dir * (av - bv);
+  });
+  document.getElementById('tbody-crossref').innerHTML = rows.map(function(r, i) {
+    var scannerBadges = r.scanners.map(function(s){ return '<span class="bs">' + s + '</span>'; }).join('');
+    var topTheme = r.themes.reduce(function(a,b){ return a.rank < b.rank ? a : b; });
+    var themeBadge = '<span class="bth">#' + topTheme.rank + ' ' + topTheme.theme.substring(0,22) + (topTheme.theme.length>22?'...':'') + '</span>';
+    if (r.theme_count > 1) themeBadge += ' <span style="color:var(--muted);font-size:10px">+' + (r.theme_count-1) + '</span>';
+    var tvSym = r.tv_symbol || r.ticker;
+    var tickerCell = '<strong><a class="tv-link" href="https://www.tradingview.com/chart/?symbol=' + encodeURIComponent(tvSym) + '" target="_blank">' + r.ticker + '</a></strong>' +
+      ' <button class="chart-btn" onclick="openChart(\'' + tvSym.replace(/'/g,"\\'") + '\',\'' + r.ticker.replace(/'/g,"\\'") + '\')" title="Grafico inline">&#x1F4C8;</button>' +
+      ' <span style="color:var(--muted);font-weight:400;font-size:11px">' + (r.name||'').substring(0,24) + '</span>';
+    return '<tr>' +
+      '<td>' + (i+1) + '</td>' +
+      '<td>' + tickerCell + '</td>' +
+      '<td>' + scDots(r.scanner_count) + '</td>' +
+      '<td style="color:var(--accent);font-weight:700">#' + r.best_theme_rank + '</td>' +
+      '<td>' + r.theme_count + '</td>' +
+      '<td>' + (r.ta_rating||0).toFixed(1) + '</td>' +
+      '<td>' + (r.fa_rating||0).toFixed(1) + '</td>' +
+      '<td>' + (r.rs_rating||0) + '</td>' +
+      '<td>$' + (r.price||0).toFixed(2) + '</td>' +
+      '<td>' + fmtPct(r.change_pct) + '</td>' +
+      '<td style="text-align:left">' + scannerBadges + '</td>' +
+      '<td style="text-align:left">' + themeBadge + '</td>' +
+    '</tr>';
+  }).join('');
+  document.getElementById('crossref-count').textContent = rows.length + ' titoli';
+  document.getElementById('total-crossref').textContent = currentCrossref.length;
+}
+
+// ---- SORT BUTTONS ----
+document.querySelectorAll('.sort-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    var col = btn.dataset.col;
+    var tbl = btn.dataset.table;
+    if (tbl === 'themes') {
+      if (themeSort.col === col) themeSort.dir *= -1; else { themeSort.col = col; themeSort.dir = -1; }
+      document.querySelectorAll('.sort-btn[data-table="themes"]').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      updateHeader('themes', col, themeSort.dir);
+      renderThemes();
+    } else {
+      if (crossSort.col === col) crossSort.dir *= -1; else { crossSort.col = col; crossSort.dir = -1; }
+      document.querySelectorAll('.sort-btn[data-table="crossref"]').forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      updateHeader('crossref', col, crossSort.dir);
+      renderCrossref();
+    }
+  });
+});
+
+// ---- HEADER CLICK SORT ----
+document.querySelectorAll('th[data-col]').forEach(function(th) {
+  th.addEventListener('click', function() {
+    var col = th.dataset.col, tbl = th.dataset.table;
+    if (tbl === 'themes') {
+      if (themeSort.col === col) themeSort.dir *= -1; else { themeSort.col = col; themeSort.dir = -1; }
+      document.querySelectorAll('.sort-btn[data-table="themes"]').forEach(function(b){
+        b.classList.toggle('active', b.dataset.col === col);
+      });
+      updateHeader('themes', col, themeSort.dir);
+      renderThemes();
+    } else {
+      if (crossSort.col === col) crossSort.dir *= -1; else { crossSort.col = col; crossSort.dir = -1; }
+      document.querySelectorAll('.sort-btn[data-table="crossref"]').forEach(function(b){
+        b.classList.toggle('active', b.dataset.col === col);
+      });
+      updateHeader('crossref', col, crossSort.dir);
+      renderCrossref();
+    }
+  });
+});
+
+// ---- CROWD FILTER ----
+document.querySelectorAll('.filter-btn[data-crowd]').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    crowdFilter = btn.dataset.crowd;
+    document.querySelectorAll('.filter-btn[data-crowd]').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+    renderThemes();
+  });
+});
+
+// ---- MIN SCANNER FILTER ----
+document.querySelectorAll('.filter-btn[data-min]').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    minScanner = parseInt(btn.dataset.min);
+    document.querySelectorAll('.filter-btn[data-min]').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+    renderCrossref();
+  });
+});
+
+// ---- CONFIG: BUILD CROSSREF IN JS ----
+function computeCrossref() {
+  // Ranked themes (already sorted by score desc in THEMES_FULL)
+  var ranked = THEMES_FULL.filter(function(t){ return selectedThemeIds[t.id]; });
+  ranked.sort(function(a,b){ return b.score - a.score; });
+
+  // Build ticker -> themes lookup
+  var tickerThemes = {};
+  ranked.forEach(function(theme, idx) {
+    (theme.stocks || []).forEach(function(ticker) {
+      if (!tickerThemes[ticker]) tickerThemes[ticker] = [];
+      tickerThemes[ticker].push({ rank: idx + 1, theme: theme.name, score: theme.score });
+    });
+  });
+
+  // Build ticker -> scanner lookup from selected scanners
+  var tickerScanners = {};
+  var tickerMeta = {};
+  Object.keys(SCANNERS_RAW).forEach(function(sid) {
+    if (!selectedScannerIds[sid]) return;
+    var label = SCANNER_LABELS[sid] || sid;
+    (SCANNERS_RAW[sid] || []).forEach(function(m) {
+      var tk = m.ticker;
+      if (!tk) return;
+      if (!tickerScanners[tk]) {
+        tickerScanners[tk] = [];
+        tickerMeta[tk] = m;
+      }
+      tickerScanners[tk].push(label);
+    });
+  });
+
+  // Intersect
+  var results = [];
+  Object.keys(tickerThemes).forEach(function(ticker) {
+    if (!tickerScanners[ticker]) return;
+    var meta = tickerMeta[ticker];
+    var themes = tickerThemes[ticker];
+    results.push({
+      ticker:           ticker,
+      name:             meta.name || '',
+      price:            meta.price || 0,
+      change_pct:       meta.change_pct || 0,
+      ta_rating:        meta.ta_rating || 0,
+      fa_rating:        meta.fa_rating || 0,
+      rs_rating:        meta.rs_rating || 0,
+      sector:           meta.sector || '',
+      avg_vol_50:       meta.avg_vol_50 || 0,
+      tv_symbol:        meta.tv_symbol || '',
+      themes:           themes,
+      theme_count:      themes.length,
+      best_theme_rank:  Math.min.apply(null, themes.map(function(t){ return t.rank; })),
+      best_theme_score: Math.max.apply(null, themes.map(function(t){ return t.score; })),
+      scanners:         tickerScanners[ticker],
+      scanner_count:    tickerScanners[ticker].length,
+    });
+  });
+
+  results.sort(function(a,b){ return b.scanner_count - a.scanner_count || a.best_theme_rank - b.best_theme_rank; });
+  return results;
+}
+
+function applyConfig() {
+  currentCrossref = computeCrossref();
+  renderCrossref();
+  updateCfgSummaries();
+  // Switch to crossref tab
+  document.querySelectorAll('.tab-btn').forEach(function(b){ b.classList.remove('active'); });
+  document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelector('.tab-btn[data-tab="crossref"]').classList.add('active');
+  document.getElementById('tab-crossref').classList.add('active');
+}
+
+function updateCfgSummaries() {
+  var tCount = Object.keys(selectedThemeIds).filter(function(k){ return selectedThemeIds[k]; }).length;
+  var sCount = Object.keys(selectedScannerIds).filter(function(k){ return selectedScannerIds[k]; }).length;
+  document.getElementById('cfg-theme-summary').textContent = '(' + tCount + ' selezionati)';
+  document.getElementById('cfg-scanner-summary').textContent = '(' + sCount + ' selezionati)';
+}
+
+function selectTopThemes(n) {
+  THEMES_FULL.forEach(function(t, i) { selectedThemeIds[t.id] = (i < n); });
+  document.querySelectorAll('.cfg-theme-cb').forEach(function(cb) {
+    cb.checked = !!selectedThemeIds[cb.value];
+  });
+  updateCfgSummaries();
+}
+function selectAllThemes(val) {
+  THEMES_FULL.forEach(function(t) { selectedThemeIds[t.id] = val; });
+  document.querySelectorAll('.cfg-theme-cb').forEach(function(cb){ cb.checked = val; });
+  updateCfgSummaries();
+}
+function selectAllScanners(val) {
+  Object.keys(SCANNER_LABELS).forEach(function(k){ selectedScannerIds[k] = val; });
+  document.querySelectorAll('.cfg-scanner-cb').forEach(function(cb){ cb.checked = val; });
+  updateCfgSummaries();
+}
+
+// ---- CONFIG: BUILD CHECKBOXES ----
+function buildConfigUI() {
+  // Themes grid (sorted by score desc, already in THEMES_FULL order)
+  var tGrid = document.getElementById('cfg-themes-grid');
+  tGrid.innerHTML = THEMES_FULL.map(function(t, i) {
+    var checked = selectedThemeIds[t.id] ? 'checked' : '';
+    return '<label class="cfg-item">' +
+      '<input type="checkbox" class="cfg-theme-cb" value="' + t.id + '" ' + checked + ' onchange="selectedThemeIds[this.value]=this.checked;updateCfgSummaries()">' +
+      '<span>' + t.name + '</span>' +
+      '<span class="cfg-rank">#' + (i+1) + ' ' + t.score.toFixed(1) + '</span>' +
+    '</label>';
+  }).join('');
+
+  // Scanners grid
+  var sGrid = document.getElementById('cfg-scanners-grid');
+  sGrid.innerHTML = Object.keys(SCANNER_LABELS).map(function(sid) {
+    var checked = selectedScannerIds[sid] ? 'checked' : '';
+    var cnt = (SCANNERS_RAW[sid] || []).length;
+    return '<label class="cfg-item">' +
+      '<input type="checkbox" class="cfg-scanner-cb" value="' + sid + '" ' + checked + ' onchange="selectedScannerIds[this.value]=this.checked;updateCfgSummaries()">' +
+      '<span>' + SCANNER_LABELS[sid] + '</span>' +
+      '<span class="cfg-rank">' + cnt + ' titoli</span>' +
+    '</label>';
+  }).join('');
+
+  updateCfgSummaries();
+}
+
+// ---- INIT ----
+// Default: top 30 themes selected, all scanners selected
+THEMES_FULL.forEach(function(t, i) { selectedThemeIds[t.id] = (i < 30); });
+Object.keys(SCANNER_LABELS).forEach(function(k){ selectedScannerIds[k] = true; });
+
+buildConfigUI();
+
+document.getElementById('asof').textContent = (THEMES_DATA[0] || {}).as_of || '';
+document.getElementById('total-themes').textContent = THEMES_DATA.length;
+document.getElementById('total-crossref').textContent = currentCrossref.length;
+renderThemes();
+renderCrossref();
+</script>
+</body>
+</html>
