@@ -424,7 +424,7 @@ with tab_cross:
             "< 100K":         (0,     0.1),
         }
 
-        f1, f2, f3, f4 = st.columns(4)
+        f1, f2, f3, f4, f5 = st.columns([1,1,1,1,1])
         with f1:
             min_scan = st.selectbox("Min scanner", [1,2,3,4,5], index=0, key="min_sc")
         with f2:
@@ -433,6 +433,8 @@ with tab_cross:
             vol_sel = st.selectbox("Volume medio 50d", list(VOL_CATS.keys()), key="vol_cat")
         with f4:
             rs_min = st.selectbox("Min RS Rating", [0, 50, 60, 70, 80, 90], index=0, key="rs_min")
+        with f5:
+            view_mode = st.radio("Vista", ["📋 Elenco", "📊 Grafici"], horizontal=True, key="view_mode")
 
         # Applica filtri
         df_c = df_c[df_c["N.Scanner"] >= min_scan]
@@ -441,8 +443,8 @@ with tab_cross:
         v_lo, v_hi = VOL_CATS[vol_sel]
         df_c = df_c[(df_c["Vol 50d"] == 0) | (df_c["Vol 50d"].between(v_lo, v_hi))]
         df_c = df_c[df_c["RS"] >= rs_min]
-        # Salva tv_symbol prima di droppare _ticker
-        tv_map = {row["_ticker"]: row["Ticker"] for _, row in df_c.iterrows()}
+        import streamlit.components.v1 as components
+
         df_display = df_c.drop(columns=["_ticker"]).reset_index(drop=True)
         df_display.index += 1
 
@@ -450,90 +452,107 @@ with tab_cross:
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("Titoli trovati", len(df_display))
         m2.metric("Media N.Scanner", f"{df_display['N.Scanner'].mean():.1f}" if len(df_display) else "—")
-        m3.metric("Media TA", f"{df_display['TA'].mean():.1f}" if len(df_display) else "—")
-        m4.metric("Media RS", f"{df_display['RS'].mean():.0f}" if len(df_display) else "—")
+        m3.metric("Media TA",        f"{df_display['TA'].mean():.1f}"        if len(df_display) else "—")
+        m4.metric("Media RS",        f"{df_display['RS'].mean():.0f}"        if len(df_display) else "—")
 
-        # Tabella con selezione riga
-        styled_c = (df_display.style
-            .background_gradient(subset=["N.Scanner"], cmap="Oranges")
-            .background_gradient(subset=["TA","FA","RS"], cmap="RdYlGn")
-            .map(color_pct, subset=["1D %"])
-            .format({
-                "N.Scanner":  "{:.0f} ●",
-                "Rank Tema":  "#{:.0f}",
-                "TA":         "{:.1f}",
-                "FA":         "{:.1f}",
-                "Prezzo $":   "${:.2f}",
-                "1D %":       "{:+.2f}%",
-                "Mkt Cap $M": "{:,.0f}M",
-                "Vol 50d":    "{:.2f}M",
-            })
-        )
-
-        tbl_col, chart_col = st.columns([3, 2])
-        with tbl_col:
-            selection = st.dataframe(
-                styled_c,
-                use_container_width=True,
-                height=520,
-                on_select="rerun",
-                selection_mode="single-row",
-                column_config={
-                    "Ticker": st.column_config.LinkColumn(
-                        "Ticker",
-                        display_text=r"symbol=(?:\w+:)?(\w+(?:\.\w+)?)",
-                        help="Clicca per aprire TradingView in nuova tab",
-                    ),
-                },
-                column_order=["Ticker","Nome","N.Scanner","Rank Tema","N.Temi",
-                              "TA","FA","RS","Prezzo $","1D %","Mkt Cap $M","Vol 50d",
-                              "Scanner","Top Tema"],
+        # ── VISTA ELENCO ──────────────────────────────────────────────────────
+        if view_mode == "📋 Elenco":
+            styled_c = (df_display.style
+                .background_gradient(subset=["N.Scanner"], cmap="Oranges")
+                .background_gradient(subset=["TA","FA","RS"], cmap="RdYlGn")
+                .map(color_pct, subset=["1D %"])
+                .format({
+                    "N.Scanner":  "{:.0f} ●",
+                    "Rank Tema":  "#{:.0f}",
+                    "TA":         "{:.1f}",
+                    "FA":         "{:.1f}",
+                    "Prezzo $":   "${:.2f}",
+                    "1D %":       "{:+.2f}%",
+                    "Mkt Cap $M": "{:,.0f}M",
+                    "Vol 50d":    "{:.2f}M",
+                })
             )
-            st.caption(f"{len(df_display)} titoli · clicca una riga per vedere il grafico →")
-
-        with chart_col:
-            selected_rows = selection.selection.get("rows", []) if selection else []
-            if selected_rows:
-                idx = selected_rows[0]
-                row      = df_display.iloc[idx]
-                ticker   = row.name  # index (1-based)
-                nome     = row["Nome"]
-                tv_url   = row["Ticker"]  # contiene l'URL TradingView
-                tv_sym   = tv_url.split("symbol=")[-1] if "symbol=" in tv_url else ""
-
-                st.markdown(f"**{tv_sym}** — {nome}")
-                st.markdown(
-                    f"[🔗 Apri in TradingView]({tv_url})  &nbsp;|&nbsp; "
-                    f"Prezzo: **${row['Prezzo $']:.2f}** &nbsp; "
-                    f"1D: **{row['1D %']:+.2f}%**"
+            tbl_col, chart_col = st.columns([3, 2])
+            with tbl_col:
+                selection = st.dataframe(
+                    styled_c,
+                    use_container_width=True,
+                    height=520,
+                    on_select="rerun",
+                    selection_mode="single-row",
+                    column_config={
+                        "Ticker": st.column_config.LinkColumn(
+                            "Ticker",
+                            display_text=r"symbol=(?:\w+:)?(\w+(?:\.\w+)?)",
+                            help="Clicca per aprire TradingView · seleziona riga per grafico inline →",
+                        ),
+                    },
+                    column_order=["Ticker","Nome","N.Scanner","Rank Tema","N.Temi",
+                                  "TA","FA","RS","Prezzo $","1D %","Mkt Cap $M","Vol 50d",
+                                  "Scanner","Top Tema"],
                 )
+                st.caption(f"{len(df_display)} titoli · seleziona una riga per il grafico →")
 
-                import streamlit.components.v1 as components
-                widget_html = f"""
-                <div class="tradingview-widget-container" style="height:440px">
-                  <div id="tv_chart" style="height:100%"></div>
-                  <script src="https://s3.tradingview.com/tv.js"></script>
-                  <script>
-                  new TradingView.widget({{
-                    "autosize": true,
-                    "symbol": "{tv_sym}",
-                    "interval": "D",
-                    "timezone": "Europe/Rome",
-                    "theme": "dark",
-                    "style": "1",
-                    "locale": "it",
-                    "toolbar_bg": "#1a1d27",
-                    "enable_publishing": false,
-                    "hide_top_toolbar": false,
-                    "hide_legend": false,
-                    "save_image": true,
-                    "container_id": "tv_chart",
-                    "studies": ["RSI@tv-basicstudies","Volume@tv-basicstudies"]
-                  }});
-                  </script>
-                </div>
-                """
-                components.html(widget_html, height=460, scrolling=False)
-            else:
-                st.markdown("<br><br>", unsafe_allow_html=True)
-                st.info("👈 Seleziona una riga dalla tabella per vedere il grafico inline")
+            with chart_col:
+                selected_rows = selection.selection.get("rows", []) if selection else []
+                if selected_rows:
+                    row    = df_display.iloc[selected_rows[0]]
+                    tv_url = row["Ticker"]
+                    tv_sym = tv_url.split("symbol=")[-1] if "symbol=" in tv_url else ""
+                    st.markdown(f"**{tv_sym}** &nbsp; {row['Nome']} &nbsp; `${row['Prezzo $']:.2f}` &nbsp; `{row['1D %']:+.2f}%`")
+                    components.html(f"""
+                    <div class="tradingview-widget-container" style="height:460px">
+                      <div id="tv_main" style="height:100%"></div>
+                      <script src="https://s3.tradingview.com/tv.js"></script>
+                      <script>
+                      new TradingView.widget({{
+                        "autosize":true,"symbol":"{tv_sym}","interval":"D",
+                        "timezone":"Europe/Rome","theme":"dark","style":"1","locale":"it",
+                        "toolbar_bg":"#1a1d27","hide_top_toolbar":false,"save_image":true,
+                        "container_id":"tv_main",
+                        "studies":["RSI@tv-basicstudies","Volume@tv-basicstudies"]
+                      }});
+                      </script>
+                    </div>""", height=480)
+                else:
+                    st.info("👈 Seleziona una riga per il grafico inline")
+
+        # ── VISTA GRAFICI ─────────────────────────────────────────────────────
+        else:
+            n_cols   = st.select_slider("Grafici per riga", [2, 3, 4], value=3, key="n_cols")
+            interval = st.select_slider("Timeframe", ["1D","1W","1M","3M","6M","12M"], value="3M", key="tv_interval")
+            rows_data = df_display.head(24).to_dict("records")  # max 24 grafici
+
+            st.caption(f"Mostrando i primi {min(len(rows_data), 24)} titoli — clicca un grafico per aprirlo su TradingView")
+
+            cols = st.columns(n_cols)
+            for i, row in enumerate(rows_data):
+                tv_url = row["Ticker"]
+                tv_sym = tv_url.split("symbol=")[-1] if "symbol=" in tv_url else row.get("Nome","")
+                pct    = row["1D %"]
+                color  = "#22c55e" if pct >= 0 else "#ef4444"
+
+                with cols[i % n_cols]:
+                    st.markdown(
+                        f"**{tv_sym}** &nbsp;"
+                        f"<span style='color:{color};font-weight:700'>{pct:+.2f}%</span> &nbsp;"
+                        f"<span style='color:#64748b;font-size:11px'>{row['N.Scanner']}● R#{row['Rank Tema']}</span>",
+                        unsafe_allow_html=True,
+                    )
+                    components.html(f"""
+                    <div class="tradingview-widget-container">
+                      <div class="tradingview-widget-container__widget"></div>
+                      <script src="https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js" async>
+                      {{
+                        "symbol": "{tv_sym}",
+                        "width": "100%",
+                        "height": 200,
+                        "locale": "it",
+                        "dateRange": "{interval}",
+                        "colorTheme": "dark",
+                        "isTransparent": false,
+                        "autosize": false,
+                        "largeChartUrl": "https://www.tradingview.com/chart/?symbol={tv_sym}"
+                      }}
+                      </script>
+                    </div>""", height=220)
