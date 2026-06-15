@@ -399,33 +399,38 @@ with tab_cross:
         st.warning("⚠️ Nessun titolo trovato. Modifica temi/scanner nella tab ⚙️ Configura.")
     else:
         # ── FILTRI ──
+        MKTCAP_CATS = {
+            "Tutti":                    (0,       9_999_999),
+            "Mega Cap  (> $200B)":      (200_000, 9_999_999),
+            "Large Cap ($10B – $200B)": (10_000,  200_000),
+            "Mid Cap   ($2B – $10B)":   (2_000,   10_000),
+            "Small Cap ($300M – $2B)":  (300,     2_000),
+            "Micro Cap (< $300M)":      (0,       300),
+        }
+        VOL_CATS = {
+            "Tutti":              (0,    9_999),
+            "Molto alto (> 10M)": (10,   9_999),
+            "Alto (1M – 10M)":    (1,    10),
+            "Medio (100K – 1M)":  (0.1,  1),
+            "Basso (< 100K)":     (0,    0.1),
+        }
+
         f1, f2, f3, f4 = st.columns(4)
         with f1:
             min_scan = st.selectbox("Min scanner", [1,2,3,4,5], index=0, key="min_sc")
         with f2:
-            mktcap_vals = df_c["Mkt Cap $M"][df_c["Mkt Cap $M"] > 0]
-            if not mktcap_vals.empty:
-                mc_min, mc_max = int(mktcap_vals.min()), int(mktcap_vals.max())
-                mc_range = st.slider("Mkt Cap ($M)", mc_min, max(mc_max,1), (mc_min, max(mc_max,1)), key="mc_range")
-            else:
-                mc_range = None
+            mc_sel = st.selectbox("Market Cap", list(MKTCAP_CATS.keys()), key="mc_cat")
         with f3:
-            vol_vals = df_c["Vol 50d"][df_c["Vol 50d"] > 0]
-            if not vol_vals.empty:
-                v_min, v_max = float(vol_vals.min()), float(vol_vals.max())
-                v_range = st.slider("Vol 50d ($M)", round(v_min,1), max(round(v_max,1),0.1),
-                                    (round(v_min,1), max(round(v_max,1),0.1)), key="vol_range")
-            else:
-                v_range = None
+            vol_sel = st.selectbox("Volume medio 50d", list(VOL_CATS.keys()), key="vol_cat")
         with f4:
-            rs_min = st.slider("Min RS Rating", 0, 99, 0, key="rs_min")
+            rs_min = st.selectbox("Min RS Rating", [0, 50, 60, 70, 80, 90], index=0, key="rs_min")
 
         # Applica filtri
         df_c = df_c[df_c["N.Scanner"] >= min_scan]
-        if mc_range and df_c["Mkt Cap $M"].max() > 0:
-            df_c = df_c[(df_c["Mkt Cap $M"] == 0) | (df_c["Mkt Cap $M"].between(*mc_range))]
-        if v_range and df_c["Vol 50d"].max() > 0:
-            df_c = df_c[(df_c["Vol 50d"] == 0) | (df_c["Vol 50d"].between(*v_range))]
+        mc_lo, mc_hi = MKTCAP_CATS[mc_sel]
+        df_c = df_c[(df_c["Mkt Cap $M"] == 0) | (df_c["Mkt Cap $M"].between(mc_lo, mc_hi))]
+        v_lo, v_hi = VOL_CATS[vol_sel]
+        df_c = df_c[(df_c["Vol 50d"] == 0) | (df_c["Vol 50d"].between(v_lo, v_hi))]
         df_c = df_c[df_c["RS"] >= rs_min]
         df_c = df_c.drop(columns=["_ticker"]).reset_index(drop=True)
         df_c.index += 1
