@@ -521,7 +521,7 @@ with tab_cross:
         with f4:
             rs_min = st.selectbox("Min RS Rating", [0, 50, 60, 70, 80, 90], index=0, key="rs_min")
         with f5:
-            view_mode = st.radio("Vista", ["📋 Elenco", "📊 Grafici"], horizontal=True, key="view_mode")
+            view_mode = st.radio("Vista", ["📋 Elenco", "📊 Grafici"], index=1, horizontal=True, key="view_mode")
 
         # Applica filtri
         df_c = df_c[df_c["N.Scanner"] >= min_scan]
@@ -636,8 +636,8 @@ with tab_cross:
             with gc3:
                 chart_h = st.select_slider("Altezza grafici", [300, 380, 460], value=380, key="chart_h")
 
-            rows_data = df_display.head(12).to_dict("records")
-            st.caption(f"Mostrando i primi {min(len(rows_data),12)} titoli · candele + EMA 21/50/200 + Volume")
+            rows_data = df_display.head(24).to_dict("records")
+            st.caption(f"Mostrando i primi {min(len(rows_data),24)} titoli · candele + EMA 21/50 + Volume · passa sopra al ticker per info azienda")
 
             cols = st.columns(n_cols)
             for i, row in enumerate(rows_data):
@@ -647,6 +647,16 @@ with tab_cross:
                 color  = "#22c55e" if pct >= 0 else "#ef4444"
                 cid    = f"tv_{i}_{tv_sym.replace(':','_').replace('.','_')}"
 
+                # build hover tooltip
+                cinfo = fetch_company_info(tv_sym)
+                if cinfo and "_error" not in cinfo:
+                    tip_name = cinfo.get("name", "") or tv_sym
+                    tip_sec  = " | ".join(filter(None, [cinfo.get("sector",""), cinfo.get("industry",""), cinfo.get("country","")]))
+                    tip_desc = (cinfo.get("description") or "")[:300]
+                    tooltip  = f"{tip_name}\n{tip_sec}\n\n{tip_desc}".replace('"', "'")
+                else:
+                    tooltip = tv_sym
+
                 with cols[i % n_cols]:
                     scanner_badges = "".join(
                         f"<span style='background:#f97316;color:#000;font-size:10px;"
@@ -655,7 +665,7 @@ with tab_cross:
                     )
                     st.markdown(
                         f"<div style='padding:4px 0 2px'>"
-                        f"<strong style='font-size:14px'>{tv_sym}</strong> &nbsp;"
+                        f"<strong title=\"{tooltip}\" style='font-size:14px;cursor:help;text-decoration:underline dotted #64748b'>{tv_sym}</strong> &nbsp;"
                         f"<span style='color:{color};font-weight:700'>{pct:+.2f}%</span> &nbsp;"
                         f"<span style='color:#64748b;font-size:11px'>R#{row['Rank Tema']} · "
                         f"TA {row['TA']:.0f} · RS {row['RS']}</span>"
