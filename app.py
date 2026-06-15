@@ -3,6 +3,8 @@ import requests
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import yfinance as yf
+import streamlit.components.v1 as components
 
 # ── CONFIG ────────────────────────────────────────────────────────────────────
 SUPABASE_URL      = "https://dwihwpjhzssmssdewzof.supabase.co"
@@ -87,6 +89,48 @@ def fetch_scanner(session, scanner_id):
     if resp.status_code != 200:
         return []
     return resp.json().get("matches", [])
+
+@st.cache_data(show_spinner=False, ttl=86400)
+def fetch_company_info(tv_symbol: str) -> dict:
+    ticker = tv_symbol.split(":")[-1] if ":" in tv_symbol else tv_symbol
+    try:
+        info = yf.Ticker(ticker).info
+        return {
+            "name":        info.get("longName", ""),
+            "sector":      info.get("sector", ""),
+            "industry":    info.get("industry", ""),
+            "country":     info.get("country", ""),
+            "employees":   info.get("fullTimeEmployees"),
+            "website":     info.get("website", ""),
+            "description": info.get("longBusinessSummary", ""),
+        }
+    except Exception:
+        return {}
+
+
+def company_card(tv_symbol: str, nome: str):
+    info = fetch_company_info(tv_symbol)
+    if not info or not info.get("description"):
+        st.caption("Descrizione non disponibile.")
+        return
+    cols = st.columns([1, 2])
+    with cols[0]:
+        st.markdown(f"**{info.get('name') or nome}**")
+        st.caption(f"📌 {info.get('sector','')} · {info.get('industry','')}")
+        st.caption(f"🌍 {info.get('country','')}")
+        if info.get("employees"):
+            st.caption(f"👥 {info['employees']:,} dipendenti")
+        if info.get("website"):
+            st.markdown(f"[🔗 Sito]({info['website']})")
+    with cols[1]:
+        desc = info["description"]
+        st.markdown(
+            f"<div style='font-size:12px;line-height:1.6;color:#374151'>"
+            f"{desc[:600]}{'…' if len(desc)>600 else ''}"
+            f"</div>",
+            unsafe_allow_html=True,
+        )
+
 
 def weighted_score(theme):
     p = theme.get("performance", {})
@@ -443,8 +487,6 @@ with tab_cross:
         v_lo, v_hi = VOL_CATS[vol_sel]
         df_c = df_c[(df_c["Vol 50d"] == 0) | (df_c["Vol 50d"].between(v_lo, v_hi))]
         df_c = df_c[df_c["RS"] >= rs_min]
-        import streamlit.components.v1 as components
-
         df_display = df_c.drop(columns=["_ticker"]).reset_index(drop=True)
         df_display.index += 1
 
@@ -501,7 +543,7 @@ with tab_cross:
                     tv_sym = tv_url.split("symbol=")[-1] if "symbol=" in tv_url else ""
                     st.markdown(f"**{tv_sym}** &nbsp; {row['Nome']} &nbsp; `${row['Prezzo $']:.2f}` &nbsp; `{row['1D %']:+.2f}%`")
                     components.html(f"""
-                    <div id="tv_main" style="height:460px"></div>
+                    <div id="tv_main" style="height:360px"></div>
                     <script src="https://s3.tradingview.com/tv.js"></script>
                     <script>
                     new TradingView.widget({{
@@ -518,19 +560,13 @@ with tab_cross:
                       "hide_side_toolbar": true,
                       "save_image": false,
                       "studies": [
-                        {{
-                          "id": "MAExp@tv-basicstudies",
-                          "inputs": {{"length": 21}},
-                          "override": {{"MA Plot.color": "#16a34a", "MA Plot.linewidth": 2}}
-                        }},
-                        {{
-                          "id": "MAExp@tv-basicstudies",
-                          "inputs": {{"length": 50}},
-                          "override": {{"MA Plot.color": "#2563eb", "MA Plot.linewidth": 2}}
-                        }}
+                        {{"id":"MAExp@tv-basicstudies","inputs":{{"length":21}},"override":{{"MA Plot.color":"#16a34a","MA Plot.linewidth":2}}}},
+                        {{"id":"MAExp@tv-basicstudies","inputs":{{"length":50}},"override":{{"MA Plot.color":"#2563eb","MA Plot.linewidth":2}}}}
                       ]
                     }});
-                    </script>""", height=480)
+                    </script>""", height=375)
+                    with st.expander("📋 Info azienda", expanded=True):
+                        company_card(tv_sym, row["Nome"])
                 else:
                     st.info("👈 Seleziona una riga per il grafico inline")
 
@@ -558,6 +594,9 @@ with tab_cross:
                 cid    = f"tv_{i}_{tv_sym.replace(':','_').replace('.','_')}"
 
                 with cols[i % n_cols]:
+                    if st.button(f"📋 {tv_sym}", key=f"info_{cid}", help="Mostra info azienda"):
+                        st.session_state["info_sym"] = tv_sym
+                        st.session_state["info_nome"] = row["Nome"]
                     scanner_badges = "".join(
                         f"<span style='background:#f97316;color:#000;font-size:10px;"
                         f"font-weight:700;padding:1px 6px;border-radius:4px;margin:1px'>{s.strip()}</span>"
@@ -607,3 +646,17 @@ with tab_cross:
                       ]
                     }});
                     </script>""", height=chart_h + 10)
+
+            # Pannello info azienda (sotto la griglia)
+            if st.session_state.get("info_sym"):
+                sym  = st.session_state["info_sym"]
+                nome = st.session_state.get("info_nome", "")
+                st.divider()
+                c1, c2 = st.columns([5, 1])
+                with c1:
+                    st.markdown(f"#### 📋 {sym} — Info azienda")
+                with c2:
+                    if st.button("✕ Chiudi", key="close_info"):
+                        st.session_state.pop("info_sym", None)
+                        st.rerun()
+                company_card(sym, nome)

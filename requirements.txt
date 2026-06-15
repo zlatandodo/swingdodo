@@ -5,6 +5,7 @@ streamlit
 pandas
 plotly
 matplotlib
+yfinance
 gspread
 google-auth
 google-auth-oauthlib
