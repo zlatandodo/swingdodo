@@ -4,6 +4,7 @@ beautifulsoup4
 streamlit
 pandas
 plotly
+matplotlib
 gspread
 google-auth
 google-auth-oauthlib
