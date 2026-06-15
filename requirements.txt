@@ -3,6 +3,7 @@ requests
 beautifulsoup4
 streamlit
 pandas
+plotly
 gspread
 google-auth
 google-auth-oauthlib
