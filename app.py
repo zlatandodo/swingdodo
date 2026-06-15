@@ -544,17 +544,6 @@ with tab_cross:
         df_display = df_c.drop(columns=["_ticker"]).reset_index(drop=True)
         df_display.index += 1
 
-        # ── INFO AZIENDA ──────────────────────────────────────────────────────
-        ticker_options = ["— seleziona ticker —"] + [
-            row["Ticker"].split("symbol=")[-1]
-            for _, row in df_display.iterrows()
-        ]
-        sel_info = st.selectbox("🔍 Info azienda", ticker_options, key="info_select")
-        if sel_info != "— seleziona ticker —":
-            st.markdown("---")
-            company_card(sel_info, sel_info)
-            st.markdown("---")
-
         st.divider()
 
         # Metriche rapide
