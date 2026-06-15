@@ -490,6 +490,18 @@ with tab_cross:
         df_display = df_c.drop(columns=["_ticker"]).reset_index(drop=True)
         df_display.index += 1
 
+        # ── INFO AZIENDA ──────────────────────────────────────────────────────
+        ticker_options = ["— seleziona ticker —"] + [
+            row["Ticker"].split("symbol=")[-1]
+            for _, row in df_display.iterrows()
+        ]
+        sel_info = st.selectbox("🔍 Info azienda", ticker_options, key="info_select")
+        if sel_info != "— seleziona ticker —":
+            with st.container(border=True):
+                company_card(sel_info, sel_info)
+
+        st.divider()
+
         # Metriche rapide
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("Titoli trovati", len(df_display))
@@ -565,8 +577,6 @@ with tab_cross:
                       ]
                     }});
                     </script>""", height=375)
-                    with st.expander("📋 Info azienda", expanded=True):
-                        company_card(tv_sym, row["Nome"])
                 else:
                     st.info("👈 Seleziona una riga per il grafico inline")
 
@@ -594,9 +604,6 @@ with tab_cross:
                 cid    = f"tv_{i}_{tv_sym.replace(':','_').replace('.','_')}"
 
                 with cols[i % n_cols]:
-                    if st.button(f"📋 {tv_sym}", key=f"info_{cid}", help="Mostra info azienda"):
-                        st.session_state["info_sym"] = tv_sym
-                        st.session_state["info_nome"] = row["Nome"]
                     scanner_badges = "".join(
                         f"<span style='background:#f97316;color:#000;font-size:10px;"
                         f"font-weight:700;padding:1px 6px;border-radius:4px;margin:1px'>{s.strip()}</span>"
@@ -647,16 +654,3 @@ with tab_cross:
                     }});
                     </script>""", height=chart_h + 10)
 
-            # Pannello info azienda (sotto la griglia)
-            if st.session_state.get("info_sym"):
-                sym  = st.session_state["info_sym"]
-                nome = st.session_state.get("info_nome", "")
-                st.divider()
-                c1, c2 = st.columns([5, 1])
-                with c1:
-                    st.markdown(f"#### 📋 {sym} — Info azienda")
-                with c2:
-                    if st.button("✕ Chiudi", key="close_info"):
-                        st.session_state.pop("info_sym", None)
-                        st.rerun()
-                company_card(sym, nome)
