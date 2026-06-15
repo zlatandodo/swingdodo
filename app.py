@@ -373,6 +373,17 @@ with tab_themes:
 # TAB 2 — GRAFICO TEMI
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_chart:
+    st.markdown(
+        "<div style='background:#1a1d27;border:1px solid #2a2d3a;border-radius:8px;"
+        "padding:10px 18px;margin-bottom:12px;font-size:13px;color:#94a3b8'>"
+        "📐 <strong style='color:#e2e8f0'>Score ponderato</strong> &nbsp;=&nbsp; "
+        "<span style='color:#f97316'>1D×10%</span> &nbsp;+&nbsp; "
+        "<span style='color:#eab308'>1W×25%</span> &nbsp;+&nbsp; "
+        "<span style='color:#22c55e'>1M×40%</span> &nbsp;+&nbsp; "
+        "<span style='color:#3b82f6'>3M×25%</span>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
     col_g1, col_g2 = st.columns(2)
 
     with col_g1:
