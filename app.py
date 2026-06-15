@@ -570,7 +570,13 @@ with tab_cross:
                     "Vol 50d":    "{:.2f}M",
                 })
             )
-            tbl_col, chart_col = st.columns([3, 2])
+            selected_rows_pre = st.session_state.get("cross_table", {}).get("selection", {}).get("rows", [])
+            if selected_rows_pre:
+                tbl_col, chart_col = st.columns([3, 2])
+            else:
+                tbl_col = st.container()
+                chart_col = None
+
             with tbl_col:
                 selection = st.dataframe(
                     styled_c,
@@ -578,6 +584,7 @@ with tab_cross:
                     height=520,
                     on_select="rerun",
                     selection_mode="single-row",
+                    key="cross_table",
                     column_config={
                         "Ticker": st.column_config.LinkColumn(
                             "Ticker",
@@ -589,11 +596,11 @@ with tab_cross:
                                   "TA","FA","RS","Prezzo $","1D %","Mkt Cap $M","Vol 50d",
                                   "Scanner","Top Tema"],
                 )
-                st.caption(f"{len(df_display)} titoli · seleziona una riga per il grafico →")
+                st.caption(f"{len(df_display)} titoli · seleziona una riga per il grafico inline →")
 
-            with chart_col:
-                selected_rows = selection.selection.get("rows", []) if selection else []
-                if selected_rows:
+            selected_rows = selection.selection.get("rows", []) if selection else []
+            if selected_rows and chart_col:
+                with chart_col:
                     row    = df_display.iloc[selected_rows[0]]
                     tv_url = row["Ticker"]
                     tv_sym = tv_url.split("symbol=")[-1] if "symbol=" in tv_url else ""
@@ -621,8 +628,6 @@ with tab_cross:
                       ]
                     }});
                     </script>""", height=375)
-                else:
-                    st.empty()
 
         # ── VISTA GRAFICI ─────────────────────────────────────────────────────
         else:
