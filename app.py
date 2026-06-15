@@ -501,19 +501,36 @@ with tab_cross:
                     tv_sym = tv_url.split("symbol=")[-1] if "symbol=" in tv_url else ""
                     st.markdown(f"**{tv_sym}** &nbsp; {row['Nome']} &nbsp; `${row['Prezzo $']:.2f}` &nbsp; `{row['1D %']:+.2f}%`")
                     components.html(f"""
-                    <div class="tradingview-widget-container" style="height:460px">
-                      <div id="tv_main" style="height:100%"></div>
-                      <script src="https://s3.tradingview.com/tv.js"></script>
-                      <script>
-                      new TradingView.widget({{
-                        "autosize":true,"symbol":"{tv_sym}","interval":"D",
-                        "timezone":"Europe/Rome","theme":"dark","style":"1","locale":"it",
-                        "toolbar_bg":"#1a1d27","hide_top_toolbar":false,"save_image":true,
-                        "container_id":"tv_main",
-                        "studies":["RSI@tv-basicstudies","Volume@tv-basicstudies"]
-                      }});
-                      </script>
-                    </div>""", height=480)
+                    <div id="tv_main" style="height:460px"></div>
+                    <script src="https://s3.tradingview.com/tv.js"></script>
+                    <script>
+                    new TradingView.widget({{
+                      "container_id": "tv_main",
+                      "autosize": true,
+                      "symbol": "{tv_sym}",
+                      "interval": "D",
+                      "timezone": "Europe/Rome",
+                      "theme": "light",
+                      "style": "9",
+                      "locale": "it",
+                      "toolbar_bg": "#ffffff",
+                      "hide_top_toolbar": false,
+                      "hide_side_toolbar": true,
+                      "save_image": false,
+                      "studies": [
+                        {{
+                          "id": "MAExp@tv-basicstudies",
+                          "inputs": {{"length": 21}},
+                          "override": {{"MA Plot.color": "#16a34a", "MA Plot.linewidth": 2}}
+                        }},
+                        {{
+                          "id": "MAExp@tv-basicstudies",
+                          "inputs": {{"length": 50}},
+                          "override": {{"MA Plot.color": "#2563eb", "MA Plot.linewidth": 2}}
+                        }}
+                      ]
+                    }});
+                    </script>""", height=480)
                 else:
                     st.info("👈 Seleziona una riga per il grafico inline")
 
@@ -560,20 +577,27 @@ with tab_cross:
                       "symbol": "{tv_sym}",
                       "interval": "{interval}",
                       "timezone": "Europe/Rome",
-                      "theme": "dark",
-                      "style": "1",
+                      "theme": "light",
+                      "style": "9",
                       "locale": "it",
-                      "toolbar_bg": "#1a1d27",
+                      "toolbar_bg": "#ffffff",
                       "hide_top_toolbar": false,
                       "hide_legend": false,
                       "hide_side_toolbar": true,
                       "allow_symbol_change": true,
                       "save_image": false,
+                      "hide_volume": false,
                       "studies": [
-                        {{"id":"MAExp@tv-basicstudies","inputs":{{"length":21}}}},
-                        {{"id":"MAExp@tv-basicstudies","inputs":{{"length":50}}}},
-                        {{"id":"MAExp@tv-basicstudies","inputs":{{"length":200}}}},
-                        {{"id":"Volume@tv-basicstudies"}}
+                        {{
+                          "id": "MAExp@tv-basicstudies",
+                          "inputs": {{"length": 21}},
+                          "override": {{"MA Plot.color": "#16a34a", "MA Plot.linewidth": 2}}
+                        }},
+                        {{
+                          "id": "MAExp@tv-basicstudies",
+                          "inputs": {{"length": 50}},
+                          "override": {{"MA Plot.color": "#2563eb", "MA Plot.linewidth": 2}}
+                        }}
                       ]
                     }});
                     </script>""", height=chart_h + 10)
