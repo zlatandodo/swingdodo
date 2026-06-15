@@ -36,7 +36,7 @@ CROWD_COLORS = {
 
 # ── PAGE SETUP ────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Dodo Weekly Scanner",
+    page_title="Dodo Swing Scanner",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -288,7 +288,7 @@ def build_crossref(records, scanner_results, sel_theme_ids, sel_scanner_ids):
 
 # ── SIDEBAR ────────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("## 📊 Dodo Weekly Scanner")
+    st.markdown("## 📊 Dodo Swing Scanner")
     st.markdown("---")
     try:
         email    = st.secrets["ASKLIVERMORE_EMAIL"]
@@ -319,7 +319,7 @@ st.markdown(
     f"<div style='margin-top:18px;margin-bottom:4px;display:flex;align-items:center;gap:14px'>"
     f"<span style='font-size:48px;line-height:1'>🦤</span>"
     f"<div>"
-    f"<div style='font-size:26px;font-weight:800;color:#f1f5f9;letter-spacing:-0.5px'>Dodo Weekly Scanner</div>"
+    f"<div style='font-size:26px;font-weight:800;color:#f1f5f9;letter-spacing:-0.5px'>Dodo Swing Scanner</div>"
     f"<div style='font-size:12px;color:#64748b;margin-top:2px'>Dati al {as_of}</div>"
     f"</div>"
     f"</div>",
