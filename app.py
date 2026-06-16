@@ -214,25 +214,90 @@ def fetch_stock_signals(symbol: str) -> dict:
 
 @st.cache_data(show_spinner=False, ttl=86400)
 def fetch_insider_buys(symbol: str) -> list:
-    """Returns recent Form 4 buy filings from SEC EDGAR (last 90 days)."""
-    ticker = symbol.split(":")[-1] if ":" in symbol else symbol
+    """Parses Form 4 XML from SEC EDGAR — returns buys with role, shares, price, total value."""
+    import xml.etree.ElementTree as ET, re, time
+    ticker  = symbol.split(":")[-1] if ":" in symbol else symbol
+    hdrs    = {"User-Agent": "dodoswingscanner/1.0 dodo.ebayer@gmail.com"}
+    results = []
     try:
         cutoff = (pd.Timestamp.now() - pd.Timedelta(days=90)).strftime("%Y-%m-%d")
         today  = pd.Timestamp.now().strftime("%Y-%m-%d")
-        url    = (f"https://efts.sec.gov/LATEST/search-index?q=%22{ticker}%22"
-                  f"&forms=4&dateRange=custom&startdt={cutoff}&enddt={today}")
-        resp   = requests.get(url, headers={"User-Agent": "dodoswingscanner/1.0 dodo.ebayer@gmail.com"}, timeout=10)
+        search_url = (f"https://efts.sec.gov/LATEST/search-index?q=%22{ticker}%22"
+                      f"&forms=4&dateRange=custom&startdt={cutoff}&enddt={today}")
+        resp = requests.get(search_url, headers=hdrs, timeout=10)
         resp.raise_for_status()
         hits = resp.json().get("hits", {}).get("hits", [])
-        buys = []
-        for h in hits[:10]:
-            src = h.get("_source", {})
-            buys.append({
-                "date":   src.get("file_date", ""),
-                "filer":  src.get("display_names", [""])[0] if src.get("display_names") else "",
-                "url":    "https://www.sec.gov/Archives/" + src.get("file_path", "").lstrip("/"),
+
+        for h in hits[:8]:
+            src        = h.get("_source", {})
+            file_path  = src.get("file_path", "")
+            file_date  = src.get("file_date", "")
+            filer_raw  = (src.get("display_names") or [""])[0]
+            filer_name = re.sub(r"\s*\(\d+\)\s*$", "", filer_raw).strip()
+            index_url  = "https://www.sec.gov" + file_path
+
+            # extract CIK + accession from path
+            m = re.search(r"/data/(\d+)/(\d+)/", file_path)
+            if not m:
+                continue
+            cik, acc_nodash = m.group(1), m.group(2)
+
+            # fetch index HTML to find the .xml primary doc
+            try:
+                time.sleep(0.15)
+                idx_html = requests.get(index_url, headers=hdrs, timeout=8).text
+                xml_match = re.search(
+                    r'href="(/Archives/edgar/data/' + cik + r'/' + acc_nodash + r'/[^"]+\.xml)"',
+                    idx_html, re.IGNORECASE
+                )
+                if not xml_match:
+                    continue
+                xml_url  = "https://www.sec.gov" + xml_match.group(1)
+                xml_text = requests.get(xml_url, headers=hdrs, timeout=8).text
+                # strip namespace so findtext works without prefix
+                xml_text = re.sub(r'\sxmlns[^"]*"[^"]*"', "", xml_text)
+                root     = ET.fromstring(xml_text)
+            except Exception:
+                continue
+
+            # role
+            role = ""
+            rel  = root.find(".//reportingOwnerRelationship")
+            if rel is not None:
+                title = rel.findtext("officerTitle") or ""
+                is_dir = rel.findtext("isDirector") or "0"
+                is_10pct = rel.findtext("isTenPercentOwner") or "0"
+                if title:
+                    role = title
+                elif is_dir == "1":
+                    role = "Director"
+                elif is_10pct == "1":
+                    role = "10% Owner"
+
+            # transactions — only buys (A = acquired)
+            total_shares, total_value = 0.0, 0.0
+            for txn in root.findall(".//nonDerivativeTransaction"):
+                code   = (txn.findtext(".//transactionAcquiredDisposedCode/value") or "").strip()
+                if code != "A":
+                    continue
+                shares = float(txn.findtext(".//transactionShares/value") or 0)
+                price  = float(txn.findtext(".//transactionPricePerShare/value") or 0)
+                total_shares += shares
+                total_value  += shares * price
+
+            if total_value <= 0:
+                continue  # skip sales or zero-value grants
+
+            results.append({
+                "date":   file_date,
+                "filer":  filer_name,
+                "role":   role or "—",
+                "shares": int(total_shares),
+                "value":  total_value,
+                "url":    index_url,
             })
-        return buys
+
+        return results
     except Exception:
         return []
 
@@ -985,17 +1050,26 @@ I market maker che vendono opzioni devono coprirsi comprando/vendendo il sottost
 
                 # ── INSIDER BUYING ───────────────────────────────────────────
                 st.markdown("### 🏦 Insider Buying (SEC Form 4 — ultimi 90 giorni)")
-                with st.spinner("Ricerca filing SEC..."):
+                with st.spinner("Parsing Form 4 da SEC EDGAR..."):
                     ins = fetch_insider_buys(gex_input)
                 if ins:
-                    for f in ins:
-                        st.markdown(
-                            f"📄 **{f['date']}** — {f['filer']} &nbsp; "
-                            f"[→ Filing SEC]({f['url']})",
-                            unsafe_allow_html=True,
-                        )
+                    df_ins = pd.DataFrame(ins)
+                    df_ins["Valore $"] = df_ins["value"].apply(
+                        lambda v: f"${v/1e6:.2f}M" if v >= 1e6 else f"${v/1e3:.0f}K"
+                    )
+                    df_ins["Azioni"]   = df_ins["shares"].apply(lambda x: f"{x:,}")
+                    df_ins["Filing"]   = df_ins["url"].apply(
+                        lambda u: f'<a href="{u}" target="_blank" style="color:#f97316">→ SEC</a>'
+                    )
+                    display_ins = df_ins[["date","filer","role","Azioni","Valore $","Filing"]].rename(columns={
+                        "date": "Data", "filer": "Insider", "role": "Ruolo"
+                    })
+                    st.write(display_ins.to_html(escape=False, index=False,
+                        table_attributes='style="width:100%;border-collapse:collapse;font-size:12px"'),
+                        unsafe_allow_html=True)
+                    st.caption(f"{len(ins)} acquisti trovati · solo transazioni con codice A (Acquired) · esclude stock grant a $0")
                 else:
-                    st.info("Nessun Form 4 trovato negli ultimi 90 giorni")
+                    st.info("Nessun acquisto insider trovato negli ultimi 90 giorni (solo vendite o nessun Form 4)")
 
         else:
             st.info("👈 Inserisci un ticker e clicca **Calcola GEX**")
