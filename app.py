@@ -178,7 +178,17 @@ def company_card(tv_symbol: str, nome: str):
 
 
 @st.cache_data(show_spinner=False, ttl=3600)
-def fetch_gex(symbol: str) -> dict:
+def fetch_expirations(symbol: str):
+    """Return list of available expiration dates for a ticker."""
+    try:
+        ticker = symbol.split(":")[-1] if ":" in symbol else symbol
+        return list(yf.Ticker(ticker).options)
+    except Exception:
+        return []
+
+
+@st.cache_data(show_spinner=False, ttl=3600)
+def fetch_gex(symbol: str, selected_exps: tuple) -> dict:
     """Calculate Gamma Exposure per strike using Black-Scholes on yfinance option chains."""
     import time
 
@@ -197,18 +207,16 @@ def fetch_gex(symbol: str) -> dict:
         spot   = t.fast_info.get("last_price") or t.fast_info.get("lastPrice")
         if not spot:
             return {"_error": "Prezzo non disponibile"}
+        if not selected_exps:
+            return {"_error": "Nessuna scadenza selezionata"}
 
-        exps = t.options
-        if not exps:
-            return {"_error": "Nessuna opzione disponibile per questo ticker"}
+        gex_map   = {}
+        call_oi   = {}
+        put_oi    = {}
+        used_exps = []
+        today     = pd.Timestamp.now(tz="UTC").normalize()
 
-        gex_map      = {}   # strike → net GEX
-        call_oi      = {}   # strike → call OI
-        put_oi       = {}   # strike → put OI
-        used_exps    = []
-        today        = pd.Timestamp.now(tz="UTC").normalize()
-
-        for exp in exps[:6]:   # prime 6 scadenze
+        for exp in selected_exps:
             exp_ts = pd.Timestamp(exp, tz="UTC")
             T      = max((exp_ts - today).days / 365, 1 / 365)
             try:
@@ -219,31 +227,24 @@ def fetch_gex(symbol: str) -> dict:
                 continue
 
             for _, row in chain.calls.iterrows():
-                iv  = row.get("impliedVolatility") or 0
-                oi  = row.get("openInterest") or 0
-                k   = row.get("strike") or 0
+                iv, oi, k = row.get("impliedVolatility") or 0, row.get("openInterest") or 0, row.get("strike") or 0
                 if iv <= 0 or oi <= 0 or k <= 0:
                     continue
                 g = bs_gamma(spot, k, T, iv)
-                gex = g * oi * 100 * spot
-                gex_map[k]  = gex_map.get(k, 0)  + gex
-                call_oi[k]  = call_oi.get(k, 0)  + oi
+                gex_map[k] = gex_map.get(k, 0) + g * oi * 100 * spot
+                call_oi[k] = call_oi.get(k, 0) + oi
 
             for _, row in chain.puts.iterrows():
-                iv  = row.get("impliedVolatility") or 0
-                oi  = row.get("openInterest") or 0
-                k   = row.get("strike") or 0
+                iv, oi, k = row.get("impliedVolatility") or 0, row.get("openInterest") or 0, row.get("strike") or 0
                 if iv <= 0 or oi <= 0 or k <= 0:
                     continue
                 g = bs_gamma(spot, k, T, iv)
-                gex = g * oi * 100 * spot
-                gex_map[k]  = gex_map.get(k, 0)  - gex   # puts flip sign
-                put_oi[k]   = put_oi.get(k, 0)   + oi
+                gex_map[k] = gex_map.get(k, 0) - g * oi * 100 * spot
+                put_oi[k]  = put_oi.get(k, 0) + oi
 
         if not gex_map:
             return {"_error": "Dati GEX insufficienti"}
 
-        # keep only strikes within ±30% of spot
         filtered = {k: v for k, v in gex_map.items() if abs(k - spot) / spot <= 0.30}
         if not filtered:
             filtered = gex_map
@@ -253,8 +254,7 @@ def fetch_gex(symbol: str) -> dict:
         strikes      = [x[0] for x in sorted_items]
         gex_vals     = [x[1] for x in sorted_items]
 
-        # gamma flip: strike where cumulative GEX changes sign
-        cumsum = np.cumsum(gex_vals)
+        cumsum      = np.cumsum(gex_vals)
         flip_strike = None
         for i in range(len(cumsum) - 1):
             if cumsum[i] * cumsum[i + 1] < 0:
@@ -265,13 +265,9 @@ def fetch_gex(symbol: str) -> dict:
         put_wall  = max(filtered, key=lambda k: put_oi.get(k, 0))  if put_oi  else None
 
         return {
-            "spot":        spot,
-            "strikes":     strikes,
-            "gex_vals":    gex_vals,
-            "net_gex":     net_gex,
-            "flip_strike": flip_strike,
-            "call_wall":   call_wall,
-            "put_wall":    put_wall,
+            "spot": spot, "strikes": strikes, "gex_vals": gex_vals,
+            "net_gex": net_gex, "flip_strike": flip_strike,
+            "call_wall": call_wall, "put_wall": put_wall,
             "expirations": used_exps,
         }
     except Exception as e:
@@ -657,13 +653,27 @@ with tab_gex:
             if quick_picks != "—":
                 gex_input = quick_picks
 
+        # carica scadenze disponibili appena cambia il ticker
+        avail_exps = fetch_expirations(gex_input) if gex_input else []
+        if avail_exps:
+            default_exps = avail_exps[:6]
+            sel_exps = st.multiselect(
+                "Scadenze",
+                options=avail_exps,
+                default=default_exps,
+                key="gex_exps",
+            )
+        else:
+            sel_exps = []
+            st.caption("Carica le scadenze premendo Calcola GEX")
+
         load_gex = st.button("📐 Calcola GEX", type="primary", use_container_width=True)
 
     with gex_col2:
-        if load_gex or st.session_state.get("gex_last") == gex_input:
-            st.session_state["gex_last"] = gex_input
-            with st.spinner(f"Calcolo GEX per {gex_input}..."):
-                gdata = fetch_gex(gex_input)
+        if load_gex or st.session_state.get("gex_last") == (gex_input, tuple(sel_exps)):
+            st.session_state["gex_last"] = (gex_input, tuple(sel_exps))
+            with st.spinner(f"Calcolo GEX per {gex_input} ({len(sel_exps)} scadenze)..."):
+                gdata = fetch_gex(gex_input, tuple(sel_exps))
 
             if "_error" in gdata:
                 st.error(f"Errore: {gdata['_error']}")
