@@ -704,66 +704,150 @@ with tab_gex:
 
                 st.markdown("<br>", unsafe_allow_html=True)
 
-                # grafico GEX
-                colors = ["#22c55e" if v >= 0 else "#ef4444" for v in gex_vals]
+                # ── GEX PROFILE CHART (stile Bullflow) ──────────────────────
+                # strikes sull'asse Y (alto = strike alto), GEX sull'asse X
+                s_arr = np.array(strikes)
+                g_arr = np.array([v / 1e6 for v in gex_vals])
+
+                # barre positive (verde) e negative (rosso) separate per colore pieno
+                pos_mask = g_arr >= 0
+                neg_mask = g_arr < 0
+
                 fig_gex = go.Figure()
+
+                # barre positive
                 fig_gex.add_trace(go.Bar(
-                    x=strikes,
-                    y=[v / 1e6 for v in gex_vals],
-                    marker_color=colors,
-                    name="GEX ($M)",
-                    hovertemplate="Strike $%{x:.0f}<br>GEX %{y:.2f}M<extra></extra>",
+                    y=s_arr[pos_mask],
+                    x=g_arr[pos_mask],
+                    orientation="h",
+                    marker=dict(
+                        color="rgba(34,197,94,0.85)",
+                        line=dict(color="rgba(34,197,94,0.3)", width=0.5),
+                    ),
+                    name="Long γ",
+                    hovertemplate="$%{y:.0f} → GEX %{x:.2f}M<extra>Long γ</extra>",
                 ))
-                # linea spot
-                fig_gex.add_vline(
-                    x=spot, line_color="#f1f5f9", line_dash="dash", line_width=2,
-                    annotation_text=f"Spot ${spot:.2f}",
-                    annotation_font_color="#f1f5f9",
-                    annotation_position="top right",
+
+                # barre negative
+                fig_gex.add_trace(go.Bar(
+                    y=s_arr[neg_mask],
+                    x=g_arr[neg_mask],
+                    orientation="h",
+                    marker=dict(
+                        color="rgba(239,68,68,0.85)",
+                        line=dict(color="rgba(239,68,68,0.3)", width=0.5),
+                    ),
+                    name="Short γ",
+                    hovertemplate="$%{y:.0f} → GEX %{x:.2f}M<extra>Short γ</extra>",
+                ))
+
+                # linea spot orizzontale (prominente, bianca)
+                fig_gex.add_hline(
+                    y=spot,
+                    line=dict(color="#ffffff", width=2, dash="solid"),
+                    annotation=dict(
+                        text=f"  Spot ${spot:.2f}",
+                        font=dict(color="#ffffff", size=12, family="monospace"),
+                        xanchor="left", x=1.01, xref="paper",
+                        showarrow=False,
+                    ),
                 )
-                # gamma flip
+
+                # gamma flip (arancione tratteggiato)
                 if flip_strike:
-                    fig_gex.add_vline(
-                        x=flip_strike, line_color="#f97316", line_dash="dot", line_width=2,
-                        annotation_text=f"Flip ${flip_strike:.0f}",
-                        annotation_font_color="#f97316",
-                        annotation_position="top left",
-                    )
-                # call wall
-                if call_wall and call_wall in strikes:
-                    fig_gex.add_vline(
-                        x=call_wall, line_color="#22c55e", line_dash="dot", line_width=1,
-                        annotation_text=f"Call Wall ${call_wall:.0f}",
-                        annotation_font_color="#22c55e",
-                        annotation_position="bottom right",
-                    )
-                # put wall
-                if put_wall and put_wall in strikes:
-                    fig_gex.add_vline(
-                        x=put_wall, line_color="#ef4444", line_dash="dot", line_width=1,
-                        annotation_text=f"Put Wall ${put_wall:.0f}",
-                        annotation_font_color="#ef4444",
-                        annotation_position="bottom left",
+                    fig_gex.add_hline(
+                        y=flip_strike,
+                        line=dict(color="#f97316", width=1.5, dash="dash"),
+                        annotation=dict(
+                            text=f"  Flip ${flip_strike:.0f}",
+                            font=dict(color="#f97316", size=11),
+                            xanchor="left", x=1.01, xref="paper",
+                            showarrow=False,
+                        ),
                     )
 
+                # call wall (verde tratteggiato)
+                if call_wall:
+                    fig_gex.add_hline(
+                        y=call_wall,
+                        line=dict(color="#4ade80", width=1, dash="dot"),
+                        annotation=dict(
+                            text=f"  Call Wall ${call_wall:.0f}",
+                            font=dict(color="#4ade80", size=10),
+                            xanchor="left", x=1.01, xref="paper",
+                            showarrow=False,
+                        ),
+                    )
+
+                # put wall (rosso tratteggiato)
+                if put_wall:
+                    fig_gex.add_hline(
+                        y=put_wall,
+                        line=dict(color="#f87171", width=1, dash="dot"),
+                        annotation=dict(
+                            text=f"  Put Wall ${put_wall:.0f}",
+                            font=dict(color="#f87171", size=10),
+                            xanchor="left", x=1.01, xref="paper",
+                            showarrow=False,
+                        ),
+                    )
+
+                # shading zona sopra spot (bullish) vs sotto (bearish)
+                fig_gex.add_hrect(
+                    y0=spot, y1=max(strikes) * 1.02,
+                    fillcolor="rgba(34,197,94,0.04)",
+                    line_width=0,
+                    layer="below",
+                )
+                fig_gex.add_hrect(
+                    y0=min(strikes) * 0.98, y1=spot,
+                    fillcolor="rgba(239,68,68,0.04)",
+                    line_width=0,
+                    layer="below",
+                )
+
+                net_color = "#22c55e" if net_gex >= 0 else "#ef4444"
+                net_label = f"{'▲ LONG γ' if net_gex >= 0 else '▼ SHORT γ'}  ${net_gex/1e6:.1f}M"
+
                 fig_gex.update_layout(
-                    paper_bgcolor="#0f1117", plot_bgcolor="#1a1d27",
-                    font_color="#e2e8f0", font_size=11,
-                    xaxis=dict(title="Strike", gridcolor="#2a2d3a", tickprefix="$"),
-                    yaxis=dict(title="GEX ($M)", gridcolor="#2a2d3a", zeroline=True,
-                               zerolinecolor="#4b5563", zerolinewidth=2),
-                    margin=dict(l=10, r=10, t=30, b=10),
-                    height=420,
-                    title=dict(
-                        text=f"GEX Map — {gex_input.upper()} &nbsp; "
-                             f"<span style='font-size:13px;color:{'#22c55e' if net_gex>=0 else '#ef4444'}'>"
-                             f"Net {'▲' if net_gex>=0 else '▼'} ${net_gex/1e6:.1f}M</span>",
-                        font_size=14,
+                    paper_bgcolor="#0f1117",
+                    plot_bgcolor="#111827",
+                    font=dict(color="#e2e8f0", size=11, family="sans-serif"),
+                    barmode="overlay",
+                    bargap=0.15,
+                    xaxis=dict(
+                        title="GEX ($M)",
+                        gridcolor="#1f2937",
+                        zeroline=True, zerolinecolor="#374151", zerolinewidth=2,
+                        ticksuffix="M",
                     ),
-                    bargap=0.1,
+                    yaxis=dict(
+                        title="Strike",
+                        gridcolor="#1f2937",
+                        tickprefix="$",
+                        dtick=None,
+                    ),
+                    margin=dict(l=10, r=120, t=50, b=10),
+                    height=560,
+                    showlegend=True,
+                    legend=dict(
+                        bgcolor="rgba(0,0,0,0)",
+                        borderwidth=0,
+                        x=0.01, y=0.99,
+                        font=dict(size=11),
+                    ),
+                    title=dict(
+                        text=(
+                            f"<b>{gex_input.upper()}</b>  GEX Profile"
+                            f"   <span style='color:{net_color}'>{net_label}</span>"
+                            f"   <span style='color:#64748b;font-size:11px'>· 6 scadenze · Black-Scholes</span>"
+                        ),
+                        font=dict(size=14, color="#f1f5f9"),
+                        x=0, xanchor="left",
+                    ),
                 )
                 st.plotly_chart(fig_gex, use_container_width=True)
-                st.caption("Dati da Yahoo Finance · calcolo gamma con Black-Scholes · aggiornato ogni ora")
+                st.caption("Dati Yahoo Finance · aggiornato ogni ora · zona verde = sopra spot (bullish), zona rossa = sotto spot (bearish)")
         else:
             st.info("👈 Inserisci un ticker e clicca **Calcola GEX**")
 
