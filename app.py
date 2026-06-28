@@ -1008,7 +1008,12 @@ with tab_cross:
         )
 
         # ── SETTORI ───────────────────────────────────────────────────────────
-        sectors_data = fetch_sector_rank()
+        sectors_data = fetch_sector_rank(
+            w1d=st.session_state.get("w_1d", 10) / 100,
+            w1w=st.session_state.get("w_1w", 35) / 100,
+            w1m=st.session_state.get("w_1m", 30) / 100,
+            w3m=st.session_state.get("w_3m", 25) / 100,
+        )
         if sectors_data:
             with st.expander("📊 Forza Relativa Settori (Finviz)", expanded=use_sector_filter):
                 all_sectors = [s["sector"] for s in sectors_data]
