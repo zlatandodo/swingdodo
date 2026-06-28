@@ -794,9 +794,11 @@ with tab_chart:
 
     st.markdown("#### 🗓️ Performance per timeframe — Top 15 temi")
     df_hm = pd.DataFrame(records[:15])[["Tema","1D %","1W %","1M %","3M %"]].set_index("Tema")
+    _abs_max = max(abs(df_hm.values.max()), abs(df_hm.values.min()), 1)
     fig_hm = px.imshow(
         df_hm,
         color_continuous_scale=[[0,"#ef4444"],[0.5,"#1a1d27"],[1,"#22c55e"]],
+        zmin=-_abs_max, zmax=_abs_max,
         text_auto=".1f",
         aspect="auto",
     )
