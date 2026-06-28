@@ -54,7 +54,7 @@ st.markdown("""
 <style>
   .block-container { padding-top: 1rem; padding-bottom: 2rem; }
   .metric-card {
-    background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 10px;
+    background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;
     padding: 16px 20px; text-align: center;
   }
   .metric-card .val { font-size: 28px; font-weight: 800; color: #f97316; }
@@ -66,7 +66,7 @@ st.markdown("""
   }
   div[data-testid="stDataFrame"] > div { border-radius: 8px; overflow: hidden; }
   .stTabs [data-baseweb="tab"] { font-size: 14px; font-weight: 600; }
-  [data-testid="stSidebar"] { background: #1a1d27; }
+  [data-testid="stSidebar"] { background: #f8fafc; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -703,7 +703,7 @@ st.markdown(
     f"<div style='margin-top:18px;margin-bottom:4px;display:flex;align-items:center;gap:14px'>"
     f"<span style='font-size:48px;line-height:1'>🦤</span>"
     f"<div>"
-    f"<div style='font-size:26px;font-weight:800;color:#f1f5f9;letter-spacing:-0.5px'>Dodo Livermore</div>"
+    f"<div style='font-size:26px;font-weight:800;color:#0f172a;letter-spacing:-0.5px'>Dodo Livermore</div>"
     f"<div style='font-size:12px;color:#64748b;margin-top:2px'>Dati al {as_of}</div>"
     f"</div>"
     f"</div>",
@@ -735,15 +735,15 @@ if pulse:
                     "<span style='color:#ef4444;font-weight:800;font-size:11px'>BEARISH</span>"
         parts.append(
             f"<span style='font-weight:700;font-size:13px;margin-right:4px;white-space:nowrap'>{sym}</span>"
-            f"<span style='color:#94a3b8;font-size:11px;margin-right:6px'>${p:.2f}</span>"
+            f"<span style='color:#64748b;font-size:11px;margin-right:6px'>${p:.2f}</span>"
             f"{badges}&nbsp;{env_label}"
         )
 
     st.markdown(
-        "<div style='background:#1a1d27;border:1px solid #2a2d3a;border-radius:10px;"
+        "<div style='background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;"
         "padding:8px 16px;display:flex;gap:24px;align-items:center;flex-wrap:nowrap;overflow:hidden'>"
         "<span style='color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:.08em;white-space:nowrap'>🌍 Market Pulse</span>"
-        + "<span style='color:#2a2d3a'>│</span>".join(parts) +
+        + "<span style='color:#0f172a'>│</span>".join(parts) +
         "</div>",
         unsafe_allow_html=True,
     )
@@ -813,9 +813,9 @@ with tab_themes:
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_chart:
     st.markdown(
-        "<div style='background:#1a1d27;border:1px solid #2a2d3a;border-radius:8px;"
-        "padding:10px 18px;margin-bottom:12px;font-size:13px;color:#94a3b8'>"
-        "📐 <strong style='color:#e2e8f0'>Score ponderato</strong> &nbsp;=&nbsp; "
+        "<div style='background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;"
+        "padding:10px 18px;margin-bottom:12px;font-size:13px;color:#64748b'>"
+        "📐 <strong style='color:#0f172a'>Score ponderato</strong> &nbsp;=&nbsp; "
         "<span style='color:#f97316'>1D×10%</span> &nbsp;+&nbsp; "
         "<span style='color:#eab308'>1W×25%</span> &nbsp;+&nbsp; "
         "<span style='color:#22c55e'>1M×40%</span> &nbsp;+&nbsp; "
@@ -838,10 +838,10 @@ with tab_chart:
             textposition="outside",
         ))
         fig_bar.update_layout(
-            paper_bgcolor="#0f1117", plot_bgcolor="#1a1d27",
-            font_color="#e2e8f0", font_size=11,
-            yaxis=dict(autorange="reversed", gridcolor="#2a2d3a"),
-            xaxis=dict(gridcolor="#2a2d3a"),
+            paper_bgcolor="#ffffff", plot_bgcolor="#f8fafc",
+            font_color="#0f172a", font_size=11,
+            yaxis=dict(autorange="reversed", gridcolor="#e2e8f0"),
+            xaxis=dict(gridcolor="#e2e8f0"),
             margin=dict(l=10, r=60, t=10, b=10),
             height=520,
             showlegend=False,
@@ -859,13 +859,13 @@ with tab_chart:
             size_max=30,
         )
         fig_sc.update_layout(
-            paper_bgcolor="#0f1117", plot_bgcolor="#1a1d27",
-            font_color="#e2e8f0", font_size=11,
-            xaxis=dict(gridcolor="#2a2d3a", title="Performance 1 Mese (%)"),
-            yaxis=dict(gridcolor="#2a2d3a", title="Score Ponderato"),
+            paper_bgcolor="#ffffff", plot_bgcolor="#f8fafc",
+            font_color="#0f172a", font_size=11,
+            xaxis=dict(gridcolor="#e2e8f0", title="Performance 1 Mese (%)"),
+            yaxis=dict(gridcolor="#e2e8f0", title="Score Ponderato"),
             margin=dict(l=10, r=10, t=10, b=10),
             height=520,
-            legend=dict(bgcolor="#1a1d27", bordercolor="#2a2d3a"),
+            legend=dict(bgcolor="#f8fafc", bordercolor="#e2e8f0"),
         )
         st.plotly_chart(fig_sc, use_container_width=True)
 
@@ -891,13 +891,13 @@ with tab_chart:
         y=list(df_hm.index),
         text=text_vals,
         texttemplate="%{text}",
-        colorscale=[[0,"#ef4444"],[0.5,"#1a1d27"],[1,"#22c55e"]],
+        colorscale=[[0,"#ef4444"],[0.5,"#f8fafc"],[1,"#22c55e"]],
         zmin=-1, zmax=1,
         showscale=False,
         hoverongaps=False,
     ))
     fig_hm.update_layout(
-        paper_bgcolor="#0f1117", plot_bgcolor="#0f1117",
+        paper_bgcolor="#ffffff", plot_bgcolor="#ffffff",
         font=dict(color="#e2e8f0", size=11),
         margin=dict(l=10, r=10, t=10, b=10),
         height=380,
@@ -1260,7 +1260,7 @@ with tab_cross:
                     )
                     st.markdown(
                         f"<div style='padding:4px 0 2px'>"
-                        f"<a href='https://www.tradingview.com/chart/?symbol={tv_sym}' target='_blank' title=\"{tooltip}\" style='font-size:14px;font-weight:700;color:#f1f5f9;text-decoration:underline dotted #64748b;cursor:pointer'>{tv_sym}</a> &nbsp;"
+                        f"<a href='https://www.tradingview.com/chart/?symbol={tv_sym}' target='_blank' title=\"{tooltip}\" style='font-size:14px;font-weight:700;color:#1d4ed8;text-decoration:underline dotted #93c5fd;cursor:pointer'>{tv_sym}</a> &nbsp;"
                         f"<span style='color:{color};font-weight:700'>{pct:+.2f}%</span> &nbsp;"
                         f"<span style='color:#64748b;font-size:11px'>R#{row['Rank Tema']} · "
                         f"TA {row['TA']:.0f} · RS {row['RS']}</span>"
