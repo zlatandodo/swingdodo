@@ -573,7 +573,7 @@ def weighted_score(theme, weights=None):
 
 # ── DATA LOADING ───────────────────────────────────────────────────────────────
 @st.cache_data(show_spinner=False, ttl=3600)
-def load_data(email, password):
+def load_data(email, password, scanner_ids: tuple = ("pullback-21ema", "livermore-buy-the-dip")):
     token   = login(email, password)
     session = make_session(token)
     themes  = fetch_themes(session)
@@ -603,7 +603,7 @@ def load_data(email, password):
     records.sort(key=lambda x: x["Score"], reverse=True)
 
     scanner_results = {}
-    for sid in SCANNERS:
+    for sid in scanner_ids:
         scanner_results[sid] = fetch_scanner(session, sid)
 
     # arricchisci i sector=None con yfinance
@@ -694,7 +694,8 @@ with st.sidebar:
 # ── LOAD ───────────────────────────────────────────────────────────────────────
 with st.spinner("⏳ Caricamento dati da AskLivermore..."):
     try:
-        records, scanner_results = load_data(email, password)
+        _sel_sc = tuple(sorted(st.session_state.get("sel_scanners", ["pullback-21ema", "livermore-buy-the-dip"])))
+        records, scanner_results = load_data(email, password, scanner_ids=_sel_sc)
     except Exception as e:
         st.error(f"❌ Errore: {e}")
         st.stop()
