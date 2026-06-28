@@ -642,7 +642,7 @@ if pulse:
         col   = "#22c55e" if above else "#ef4444"
         icon  = "▲" if above else "▼"
         return (f"<span style='background:{col}22;border:1px solid {col};color:{col};"
-                f"font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px;margin:2px'>"
+                f"font-size:10px;font-weight:700;padding:1px 5px;border-radius:4px;margin:0 2px;white-space:nowrap'>"
                 f"{icon} {label}</span>")
 
     parts = []
@@ -654,19 +654,19 @@ if pulse:
             _ema_badge(p, d["ema50"], "EMA50")
         )
         above_all = p > d["ema8"] and p > d["ema21"] and p > d["ema50"]
-        env_label = "<span style='color:#22c55e;font-weight:800'>BULLISH</span>" if above_all else \
-                    "<span style='color:#ef4444;font-weight:800'>BEARISH</span>"
+        env_label = "<span style='color:#22c55e;font-weight:800;font-size:11px'>BULLISH</span>" if above_all else \
+                    "<span style='color:#ef4444;font-weight:800;font-size:11px'>BEARISH</span>"
         parts.append(
-            f"<span style='font-weight:700;font-size:14px;margin-right:6px'>{sym}</span>"
-            f"<span style='color:#94a3b8;font-size:12px'>${p:.2f}</span> &nbsp;"
-            f"{badges} &nbsp; {env_label}"
+            f"<span style='font-weight:700;font-size:13px;margin-right:4px;white-space:nowrap'>{sym}</span>"
+            f"<span style='color:#94a3b8;font-size:11px;margin-right:6px'>${p:.2f}</span>"
+            f"{badges}&nbsp;{env_label}"
         )
 
     st.markdown(
         "<div style='background:#1a1d27;border:1px solid #2a2d3a;border-radius:10px;"
-        "padding:12px 20px;display:flex;gap:40px;align-items:center;flex-wrap:wrap'>"
-        "<span style='color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:.08em;margin-right:4px'>🌍 Market Pulse</span>"
-        + " &nbsp;&nbsp;│&nbsp;&nbsp; ".join(parts) +
+        "padding:8px 16px;display:flex;gap:24px;align-items:center;flex-wrap:nowrap;overflow:hidden'>"
+        "<span style='color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:.08em;white-space:nowrap'>🌍 Market Pulse</span>"
+        + "<span style='color:#2a2d3a'>│</span>".join(parts) +
         "</div>",
         unsafe_allow_html=True,
     )
