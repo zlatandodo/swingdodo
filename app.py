@@ -18,7 +18,8 @@ SITE_URL          = "https://www.asklivermore.com"
 WEIGHTS           = {"1d": 0.10, "1w": 0.25, "1m": 0.40, "3m": 0.25}
 
 SCANNERS = {
-    "trend-template":             "Trend Template",
+    "trend-template":             "Trend Template | Mark Minervini",
+    "pullback-21ema":             "Pullback to 21 EMA",
     "vcp":                        "VCP | Minervini",
     "bull-flag":                  "Bull Flag",
     "pocket-pivot":               "Pocket Pivot",
@@ -866,7 +867,7 @@ with tab_cross:
             "< 100K":         (0,     0.1),
         }
 
-        f1, f2, f3, f4, f5 = st.columns([1,1,1,1,1])
+        f1, f2, f3, f4 = st.columns([1,1,1,1])
         with f1:
             min_scan = st.selectbox("Min scanner", [1,2,3,4,5], index=0, key="min_sc")
         with f2:
@@ -874,8 +875,6 @@ with tab_cross:
         with f3:
             vol_sel = st.selectbox("Volume medio 50d", list(VOL_CATS.keys()), key="vol_cat")
         with f4:
-            rs_min = st.selectbox("Min RS Rating", [0, 50, 60, 70, 80, 90], index=0, key="rs_min")
-        with f5:
             view_mode = st.radio("Vista", ["📋 Elenco", "📊 Grafici"], index=1, horizontal=True, key="view_mode")
 
         # Applica filtri
@@ -884,7 +883,6 @@ with tab_cross:
         df_c = df_c[(df_c["Mkt Cap $M"] == 0) | (df_c["Mkt Cap $M"].between(mc_lo, mc_hi))]
         v_lo, v_hi = VOL_CATS[vol_sel]
         df_c = df_c[(df_c["Vol 50d"] == 0) | (df_c["Vol 50d"].between(v_lo, v_hi))]
-        df_c = df_c[df_c["RS"] >= rs_min]
         df_display = df_c.drop(columns=["_ticker"]).reset_index(drop=True)
         df_display.index += 1
 
