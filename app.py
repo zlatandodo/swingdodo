@@ -965,7 +965,7 @@ with tab_cross:
         sel_scanner_ids = set(["pullback-21ema", "livermore-buy-the-dip"])
 
     # se il filtro temi è disattivato, usa tutti i temi
-    _use_themes = st.session_state.get("use_theme_filter", True)
+    _use_themes = st.session_state.get("use_theme_filter", False)
     _active_theme_ids = sel_theme_ids if _use_themes else {r["id"] for r in records}
 
     crossref = build_crossref(records, scanner_results, _active_theme_ids, sel_scanner_ids)
@@ -1012,7 +1012,7 @@ with tab_cross:
 
         t1, t2 = st.columns(2)
         with t1:
-            use_theme_filter = st.toggle("🎯 Filtro temi AskLivermore (54 temi)", value=True, key="use_theme_filter")
+            use_theme_filter = st.toggle("🎯 Filtro temi AskLivermore (54 temi)", value=False, key="use_theme_filter")
         with t2:
             use_sector_filter = st.toggle("🌐 Filtro settori Finviz (11 macro-settori)", value=False, key="use_sector_filter")
 
