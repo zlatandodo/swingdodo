@@ -919,12 +919,25 @@ with tab_cross:
         with g3:
             chart_h = st.select_slider("Altezza grafici", [300, 380, 460], value=380, key="chart_h")
 
+        must_sc = st.multiselect(
+            "🔒 Deve comparire in (lascia vuoto = nessun vincolo)",
+            options=list(sel_scanner_ids),
+            default=[],
+            format_func=lambda k: SCANNERS[k],
+            key="must_sc",
+        )
+
         # Applica filtri
         df_c = df_c[df_c["N.Scanner"] >= min_scan]
         mc_lo, mc_hi = MKTCAP_CATS[mc_sel]
         df_c = df_c[(df_c["Mkt Cap $M"] == 0) | (df_c["Mkt Cap $M"].between(mc_lo, mc_hi))]
         v_lo, v_hi = VOL_CATS[vol_sel]
         df_c = df_c[(df_c["Vol 50d"] == 0) | (df_c["Vol 50d"].between(v_lo, v_hi))]
+        if must_sc:
+            must_names = {SCANNERS[k] for k in must_sc}
+            df_c = df_c[df_c["Scanner"].apply(
+                lambda s: any(m in s for m in must_names)
+            )]
         df_display = df_c.drop(columns=["_ticker"]).reset_index(drop=True)
         df_display.index += 1
 
