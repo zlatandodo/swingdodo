@@ -779,19 +779,37 @@ with tab_chart:
 
     st.markdown("#### 🗓️ Performance per timeframe — Top 15 temi")
     df_hm = pd.DataFrame(records[:15])[["Tema","1D %","1W %","1M %","3M %"]].set_index("Tema")
-    _abs_max = max(abs(df_hm.values.max()), abs(df_hm.values.min()), 1)
-    fig_hm = px.imshow(
-        df_hm,
-        color_continuous_scale=[[0,"#ef4444"],[0.5,"#1a1d27"],[1,"#22c55e"]],
-        zmin=-_abs_max, zmax=_abs_max,
-        text_auto=".1f",
-        aspect="auto",
-    )
+    # normalizza ogni colonna indipendentemente (-1..+1) per il colore, testo = valore reale
+    df_norm = df_hm.copy().astype(float)
+    for col in df_norm.columns:
+        col_abs = max(abs(df_norm[col].max()), abs(df_norm[col].min()), 0.01)
+        df_norm[col] = df_norm[col] / col_abs
+    text_vals = [[f"{v:+.1f}%" for v in row] for row in df_hm.values]
+    def _hex_color(v):
+        # v in -1..+1; green positive, red negative, dark neutral
+        if v >= 0:
+            r, g, b = int(34*(1-v)), int(197*v + 29*(1-v)), int(94*(1-v))
+        else:
+            r, g, b = int(239*(-v) + 26*(1+v)), int(68*(1+v)), int(68*(1+v))
+        return f"rgb({r},{g},{b})"
+    cell_colors = [[_hex_color(v) for v in row] for row in df_norm.values]
+    fig_hm = go.Figure(go.Heatmap(
+        z=df_norm.values,
+        x=list(df_hm.columns),
+        y=list(df_hm.index),
+        text=text_vals,
+        texttemplate="%{text}",
+        colorscale=[[0,"#ef4444"],[0.5,"#1a1d27"],[1,"#22c55e"]],
+        zmin=-1, zmax=1,
+        showscale=False,
+        hoverongaps=False,
+    ))
     fig_hm.update_layout(
-        paper_bgcolor="#0f1117", font_color="#e2e8f0", font_size=11,
-        coloraxis_showscale=False,
+        paper_bgcolor="#0f1117", plot_bgcolor="#0f1117",
+        font=dict(color="#e2e8f0", size=11),
         margin=dict(l=10, r=10, t=10, b=10),
         height=380,
+        yaxis=dict(autorange="reversed"),
     )
     st.plotly_chart(fig_hm, use_container_width=True)
 
