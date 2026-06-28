@@ -985,6 +985,28 @@ with tab_cross:
         sectors_data = fetch_sector_rank()
         if sectors_data:
             with st.expander("📊 Forza Relativa Settori (Finviz)", expanded=True):
+                all_sectors = [s["sector"] for s in sectors_data]
+
+                sa, sb = st.columns([1, 3])
+                with sa:
+                    top_n_sec = st.selectbox(
+                        "🏆 Filtra automaticamente top N settori",
+                        options=["Tutti", 1, 2, 3, 4, 5],
+                        index=3,  # default: top 3
+                        key="top_n_sec",
+                    )
+                with sb:
+                    if top_n_sec == "Tutti":
+                        auto_default = []
+                    else:
+                        auto_default = [s["sector"] for s in sectors_data[:top_n_sec]]
+                    sel_sectors = st.multiselect(
+                        "Settori attivi (modificabile)",
+                        options=all_sectors,
+                        default=auto_default,
+                        key="sel_sectors",
+                    )
+
                 df_sec = pd.DataFrame(sectors_data)
                 def _pct(v): return f"{v*100:+.1f}%"
                 def _sec_color(v):
@@ -992,21 +1014,19 @@ with tab_cross:
                         if v > 0: return "color:#22c55e;font-weight:600"
                         if v < 0: return "color:#ef4444;font-weight:600"
                     return ""
+                # evidenzia i settori selezionati
+                def _highlight_sel(row):
+                    if row["sector"] in sel_sectors:
+                        return ["background-color:#f9731622"] * len(row)
+                    return [""] * len(row)
                 styled_sec = (df_sec.rename(columns={
                     "sector":"Settore","perf_1d":"1D","perf_1w":"1W",
                     "perf_1m":"1M","perf_3m":"3M","score":"Score"
                 }).style
+                    .apply(_highlight_sel, axis=1, subset=None)
                     .map(_sec_color, subset=["1D","1W","1M","3M","Score"])
                     .format({"1D":_pct,"1W":_pct,"1M":_pct,"3M":_pct,"Score":"{:.4f}"}))
                 st.dataframe(styled_sec, use_container_width=True, height=280, hide_index=True)
-
-                all_sectors = [s["sector"] for s in sectors_data]
-                sel_sectors = st.multiselect(
-                    "🌐 Filtra per settore (vuoto = tutti)",
-                    options=all_sectors,
-                    default=[],
-                    key="sel_sectors",
-                )
         else:
             sel_sectors = []
 
