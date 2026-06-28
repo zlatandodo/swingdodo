@@ -694,7 +694,7 @@ with tab_themes:
     with col_f3:
         top_n_show = st.selectbox("Mostra", [10, 20, 30, 54], index=2, key="topn")
 
-    df_t = pd.DataFrame([{k: v for k, v in r.items() if k not in ("id","stocks","as_of")} for r in records])
+    df_t = pd.DataFrame([{k: v for k, v in r.items() if k not in ("id","stocks","as_of","_perf")} for r in records])
     if crowd_sel != "Tutti":
         df_t = df_t[df_t["Crowding"] == crowd_sel]
     if tipo_sel != "Tutti":
@@ -715,6 +715,12 @@ with tab_themes:
             elif val < 0:  return "color: #ef4444"
         return "font-weight:600"
 
+    _w1d = st.session_state.get("w_1d", 10)
+    _w1w = st.session_state.get("w_1w", 25)
+    _w1m = st.session_state.get("w_1m", 40)
+    _w3m = st.session_state.get("w_3m", 25)
+    st.caption(f"{len(df_t)} temi · Ponderazione: 1D={_w1d}% | 1W={_w1w}% | 1M={_w1m}% | 3M={_w3m}%")
+
     styled = (df_t.style
         .map(color_score, subset=["Score"])
         .map(color_pct,   subset=["1M %","3M %","1W %","1D %"])
@@ -724,7 +730,6 @@ with tab_themes:
     )
 
     st.dataframe(styled, use_container_width=True, height=560)
-    st.caption(f"{len(df_t)} temi · Ponderazione: 1M=40% | 3M=25% | 1W=25% | 1D=10%")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 2 — GRAFICO TEMI
@@ -904,6 +909,16 @@ with tab_cross:
         with f4:
             view_mode = st.radio("Vista", ["📋 Elenco", "📊 Grafici"], index=1, horizontal=True, key="view_mode")
 
+        g1, g2, g3 = st.columns([1,1,1])
+        with g1:
+            n_cols = st.select_slider("Grafici per riga", [1, 2, 3], value=2, key="n_cols")
+        with g2:
+            interval = st.selectbox("Timeframe grafico", ["D","W","M"], index=0,
+                                    format_func=lambda x: {"D":"Giornaliero","W":"Settimanale","M":"Mensile"}[x],
+                                    key="tv_interval")
+        with g3:
+            chart_h = st.select_slider("Altezza grafici", [300, 380, 460], value=380, key="chart_h")
+
         # Applica filtri
         df_c = df_c[df_c["N.Scanner"] >= min_scan]
         mc_lo, mc_hi = MKTCAP_CATS[mc_sel]
@@ -1000,16 +1015,6 @@ with tab_cross:
 
         # ── VISTA GRAFICI ─────────────────────────────────────────────────────
         else:
-            gc1, gc2, gc3 = st.columns(3)
-            with gc1:
-                n_cols = st.select_slider("Grafici per riga", [1, 2, 3], value=2, key="n_cols")
-            with gc2:
-                interval = st.selectbox("Timeframe", ["D","W","M"], index=0,
-                                        format_func=lambda x: {"D":"Giornaliero","W":"Settimanale","M":"Mensile"}[x],
-                                        key="tv_interval")
-            with gc3:
-                chart_h = st.select_slider("Altezza grafici", [300, 380, 460], value=380, key="chart_h")
-
             rows_data = df_display.head(24).to_dict("records")
             st.caption(f"Mostrando i primi {min(len(rows_data),24)} titoli · candele + EMA 21/50 + Volume · passa sopra al ticker per info azienda")
 
