@@ -835,7 +835,7 @@ with tab_config:
 
     st.markdown("---")
     st.markdown("### 🔍 Selezione Scanner")
-    DEFAULT_SCANNERS = ["pullback-21ema", "trend-template", "livermore-buy-the-dip"]
+    DEFAULT_SCANNERS = ["pullback-21ema", "livermore-buy-the-dip"]
     sel_sc = st.multiselect(
         "Scanner attivi",
         list(SCANNERS.keys()),
@@ -866,11 +866,11 @@ with tab_config:
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_cross:
     sel_theme_ids   = {r["id"] for r in records if r["Tema"] in st.session_state.get("sel_themes", [])}
-    sel_scanner_ids = set(st.session_state.get("sel_scanners", ["pullback-21ema", "trend-template", "livermore-buy-the-dip"]))
+    sel_scanner_ids = set(st.session_state.get("sel_scanners", ["pullback-21ema", "livermore-buy-the-dip"]))
     if not sel_theme_ids:
         sel_theme_ids = {r["id"] for r in records[:30]}
     if not sel_scanner_ids:
-        sel_scanner_ids = set(["pullback-21ema", "trend-template", "livermore-buy-the-dip"])
+        sel_scanner_ids = set(["pullback-21ema", "livermore-buy-the-dip"])
 
     crossref = build_crossref(records, scanner_results, sel_theme_ids, sel_scanner_ids)
     df_c = pd.DataFrame(crossref) if crossref else pd.DataFrame()
@@ -924,7 +924,7 @@ with tab_cross:
         with g3:
             chart_h = st.select_slider("Altezza grafici", [300, 380, 460], value=380, key="chart_h")
 
-        _must_default = ["trend-template"] if "trend-template" in sel_scanner_ids else []
+        _must_default = []
         must_sc = st.multiselect(
             "🔒 Deve comparire in (lascia vuoto = nessun vincolo)",
             options=list(sel_scanner_ids),
