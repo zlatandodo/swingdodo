@@ -673,10 +673,10 @@ if pulse:
     st.markdown("<br>", unsafe_allow_html=True)
 
 # ── TABS ───────────────────────────────────────────────────────────────────────
-tab_themes, tab_chart, tab_cross, tab_config = st.tabs([
+tab_cross, tab_themes, tab_chart, tab_config = st.tabs([
+    "🎯 Setup",
     "📈 Theme Momentum",
     "📊 Grafico Temi",
-    "🎯 Cross-Reference",
     "⚙️ Configura",
 ])
 
