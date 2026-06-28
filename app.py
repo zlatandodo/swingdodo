@@ -473,9 +473,10 @@ def fetch_market_pulse():
             pass
     return results
 
-def weighted_score(theme):
+def weighted_score(theme, weights=None):
     p = theme.get("performance", {})
-    return sum(WEIGHTS[k] * (p.get(k) or 0.0) for k in WEIGHTS)
+    w = weights or WEIGHTS
+    return sum(w[k] * (p.get(k) or 0.0) for k in w)
 
 # ── DATA LOADING ───────────────────────────────────────────────────────────────
 @st.cache_data(show_spinner=False, ttl=3600)
@@ -504,6 +505,7 @@ def load_data(email, password):
             "Titoli":   t.get("stock_count", 0),
             "stocks":   t.get("stocks", []),
             "as_of":    t.get("as_of", ""),
+            "_perf":    p,
         })
     records.sort(key=lambda x: x["Score"], reverse=True)
 
@@ -591,6 +593,16 @@ with st.spinner("⏳ Caricamento dati da AskLivermore..."):
     except Exception as e:
         st.error(f"❌ Errore: {e}")
         st.stop()
+
+# ricalcola score con pesi custom se impostati
+_w1d = st.session_state.get("w_1d", 10)
+_w1w = st.session_state.get("w_1w", 25)
+_w1m = st.session_state.get("w_1m", 40)
+_w3m = st.session_state.get("w_3m", 25)
+if _w1d + _w1w + _w1m + _w3m == 100:
+    _custom_w = {"1d": _w1d/100, "1w": _w1w/100, "1m": _w1m/100, "3m": _w3m/100}
+    records = [dict(r, Score=round(weighted_score({"performance": r["_perf"]}, _custom_w), 2)) for r in records]
+    records.sort(key=lambda x: x["Score"], reverse=True)
 
 as_of = records[0]["as_of"] if records else ""
 
@@ -821,6 +833,20 @@ with tab_config:
         format_func=lambda k: f"{SCANNERS[k]}  ({len(scanner_results.get(k,[]))} titoli)",
         key="sel_scanners",
     )
+
+    st.markdown("---")
+    st.markdown("### ⚖️ Pesi Score Ponderato")
+    st.caption("La somma deve essere 100%. Lo score ordina i temi nel grafico e nel cross-reference.")
+    wc1, wc2, wc3, wc4 = st.columns(4)
+    w1d = wc1.slider("1 Day %",   0, 100, st.session_state.get("w_1d", 10), 5, key="w_1d")
+    w1w = wc2.slider("1 Week %",  0, 100, st.session_state.get("w_1w", 25), 5, key="w_1w")
+    w1m = wc3.slider("1 Month %", 0, 100, st.session_state.get("w_1m", 40), 5, key="w_1m")
+    w3m = wc4.slider("3 Month %", 0, 100, st.session_state.get("w_3m", 25), 5, key="w_3m")
+    w_total = w1d + w1w + w1m + w3m
+    if w_total != 100:
+        st.warning(f"⚠️ La somma è {w_total}% — deve essere 100%")
+    else:
+        st.success(f"✓ 1D {w1d}% · 1W {w1w}% · 1M {w1m}% · 3M {w3m}%")
 
     st.markdown("---")
     st.info(f"**{len(sel_th)}** temi selezionati · **{len(sel_sc)}** scanner selezionati")
