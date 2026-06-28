@@ -618,21 +618,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-c1, c2, c3, c4 = st.columns(4)
-top5 = records[:5]
-avg_score_top5 = round(sum(r["Score"] for r in top5) / len(top5), 1) if top5 else 0
-total_scan_results = sum(len(v) for v in scanner_results.values())
-
-with c1:
-    st.markdown(f'<div class="metric-card"><div class="val">{len(records)}</div><div class="lbl">Temi totali</div></div>', unsafe_allow_html=True)
-with c2:
-    st.markdown(f'<div class="metric-card"><div class="val">{avg_score_top5}</div><div class="lbl">Score medio top 5</div></div>', unsafe_allow_html=True)
-with c3:
-    st.markdown(f'<div class="metric-card"><div class="val">{len(SCANNERS)}</div><div class="lbl">Scanner attivi</div></div>', unsafe_allow_html=True)
-with c4:
-    st.markdown(f'<div class="metric-card"><div class="val">{total_scan_results}</div><div class="lbl">Segnali scanner totali</div></div>', unsafe_allow_html=True)
-
-st.markdown("<br>", unsafe_allow_html=True)
 
 # ── MARKET PULSE ───────────────────────────────────────────────────────────────
 pulse = fetch_market_pulse()
