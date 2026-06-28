@@ -473,6 +473,53 @@ def fetch_market_pulse():
             pass
     return results
 
+@st.cache_data(show_spinner=False, ttl=3600)
+def fetch_sector_rank(w1d=0.10, w1w=0.35, w1m=0.35, w3m=0.20, group="Sector"):
+    try:
+        from finvizfinance.group.performance import Performance
+        import time as _time
+
+        def _load():
+            return Performance().screener_view(group=group)
+
+        df = None
+        for attempt in range(3):
+            try:
+                df = _load()
+                break
+            except Exception:
+                if attempt < 2:
+                    _time.sleep(2 ** attempt * 2)
+        if df is None or df.empty:
+            return []
+
+        # normalizza scale
+        s = df["Perf Week"].astype(str).str.replace("%", "").str.strip()
+        df["Perf Week"] = pd.to_numeric(s, errors="coerce") / 100.0
+        for col in ["Perf Month", "Perf Quart"]:
+            v = pd.to_numeric(df[col].astype(str).str.replace("%", "").str.strip(), errors="coerce")
+            df[col] = v.where(v.abs() <= 1.5, v / 100.0)
+        df["Change"] = pd.to_numeric(df["Change"], errors="coerce")
+
+        z = pd.Series(0.0, index=df.index)
+        df["score"] = (
+            df.get("Change",     z).fillna(0) * w1d +
+            df.get("Perf Week",  z).fillna(0) * w1w +
+            df.get("Perf Month", z).fillna(0) * w1m +
+            df.get("Perf Quart", z).fillna(0) * w3m
+        )
+        df = df.sort_values("score", ascending=False)
+        return [{
+            "sector":  r["Name"],
+            "perf_1d": round(float(r.get("Change", 0) or 0), 4),
+            "perf_1w": round(float(r.get("Perf Week", 0) or 0), 4),
+            "perf_1m": round(float(r.get("Perf Month", 0) or 0), 4),
+            "perf_3m": round(float(r.get("Perf Quart", 0) or 0), 4),
+            "score":   round(float(r["score"]), 4),
+        } for _, r in df.iterrows()]
+    except Exception:
+        return []
+
 def weighted_score(theme, weights=None):
     p = theme.get("performance", {})
     w = weights or WEIGHTS
@@ -563,6 +610,7 @@ def build_crossref(records, scanner_results, sel_theme_ids, sel_scanner_ids):
             "Scanner":      ", ".join(ticker_scanners[tk]),
             "Top Tema":     f"#{best['rank']} {best['theme'][:28]}",
             "_ticker":      tk,
+            "_sector":      meta.get("sector", ""),
         })
 
     rows.sort(key=lambda x: (-x["N.Scanner"], x["Rank Tema"]))
@@ -933,6 +981,35 @@ with tab_cross:
             key="must_sc",
         )
 
+        # ── SETTORI ───────────────────────────────────────────────────────────
+        sectors_data = fetch_sector_rank()
+        if sectors_data:
+            with st.expander("📊 Forza Relativa Settori (Finviz)", expanded=True):
+                df_sec = pd.DataFrame(sectors_data)
+                def _pct(v): return f"{v*100:+.1f}%"
+                def _sec_color(v):
+                    if isinstance(v, float):
+                        if v > 0: return "color:#22c55e;font-weight:600"
+                        if v < 0: return "color:#ef4444;font-weight:600"
+                    return ""
+                styled_sec = (df_sec.rename(columns={
+                    "sector":"Settore","perf_1d":"1D","perf_1w":"1W",
+                    "perf_1m":"1M","perf_3m":"3M","score":"Score"
+                }).style
+                    .map(_sec_color, subset=["1D","1W","1M","3M","Score"])
+                    .format({"1D":_pct,"1W":_pct,"1M":_pct,"3M":_pct,"Score":"{:.4f}"}))
+                st.dataframe(styled_sec, use_container_width=True, height=280, hide_index=True)
+
+                all_sectors = [s["sector"] for s in sectors_data]
+                sel_sectors = st.multiselect(
+                    "🌐 Filtra per settore (vuoto = tutti)",
+                    options=all_sectors,
+                    default=[],
+                    key="sel_sectors",
+                )
+        else:
+            sel_sectors = []
+
         # Applica filtri
         df_c = df_c[df_c["N.Scanner"] >= min_scan]
         mc_lo, mc_hi = MKTCAP_CATS[mc_sel]
@@ -944,7 +1021,9 @@ with tab_cross:
             df_c = df_c[df_c["Scanner"].apply(
                 lambda s: any(m in s for m in must_names)
             )]
-        df_display = df_c.drop(columns=["_ticker"]).reset_index(drop=True)
+        if sel_sectors:
+            df_c = df_c[df_c["_sector"].isin(sel_sectors)]
+        df_display = df_c.drop(columns=["_ticker", "_sector"]).reset_index(drop=True)
         df_display.index += 1
 
         st.divider()
