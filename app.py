@@ -1101,7 +1101,7 @@ with tab_cross:
                     )
                     st.markdown(
                         f"<div style='padding:4px 0 2px'>"
-                        f"<strong title=\"{tooltip}\" style='font-size:14px;cursor:help;text-decoration:underline dotted #64748b'>{tv_sym}</strong> &nbsp;"
+                        f"<a href='https://www.tradingview.com/chart/?symbol={tv_sym}' target='_blank' title=\"{tooltip}\" style='font-size:14px;font-weight:700;color:#f1f5f9;text-decoration:underline dotted #64748b;cursor:pointer'>{tv_sym}</a> &nbsp;"
                         f"<span style='color:{color};font-weight:700'>{pct:+.2f}%</span> &nbsp;"
                         f"<span style='color:#64748b;font-size:11px'>R#{row['Rank Tema']} · "
                         f"TA {row['TA']:.0f} · RS {row['RS']}</span>"
