@@ -936,7 +936,11 @@ with tab_cross:
     if not sel_scanner_ids:
         sel_scanner_ids = set(["pullback-21ema", "livermore-buy-the-dip"])
 
-    crossref = build_crossref(records, scanner_results, sel_theme_ids, sel_scanner_ids)
+    # se il filtro temi è disattivato, usa tutti i temi
+    _use_themes = st.session_state.get("use_theme_filter", True)
+    _active_theme_ids = sel_theme_ids if _use_themes else {r["id"] for r in records}
+
+    crossref = build_crossref(records, scanner_results, _active_theme_ids, sel_scanner_ids)
     df_c = pd.DataFrame(crossref) if crossref else pd.DataFrame()
 
     if df_c.empty:
@@ -978,6 +982,12 @@ with tab_cross:
         with f4:
             view_mode = st.radio("Vista", ["📋 Elenco", "📊 Grafici"], index=1, horizontal=True, key="view_mode")
 
+        t1, t2 = st.columns(2)
+        with t1:
+            use_theme_filter = st.toggle("🎯 Filtro temi AskLivermore (54 temi)", value=True, key="use_theme_filter")
+        with t2:
+            use_sector_filter = st.toggle("🌐 Filtro settori Finviz (11 macro-settori)", value=False, key="use_sector_filter")
+
         g1, g2, g3 = st.columns([1,1,1])
         with g1:
             n_cols = st.select_slider("Grafici per riga", [1, 2, 3], value=2, key="n_cols")
@@ -1000,7 +1010,7 @@ with tab_cross:
         # ── SETTORI ───────────────────────────────────────────────────────────
         sectors_data = fetch_sector_rank()
         if sectors_data:
-            with st.expander("📊 Forza Relativa Settori (Finviz)", expanded=True):
+            with st.expander("📊 Forza Relativa Settori (Finviz)", expanded=use_sector_filter):
                 all_sectors = [s["sector"] for s in sectors_data]
 
                 sa, sb = st.columns([1, 3])
@@ -1058,7 +1068,7 @@ with tab_cross:
             df_c = df_c[df_c["Scanner"].apply(
                 lambda s: any(m in s for m in must_names)
             )]
-        if sel_sectors:
+        if use_sector_filter and sel_sectors:
             df_c = df_c[df_c["_sector"].isin(sel_sectors)]
         df_display = df_c.drop(columns=["_ticker", "_sector"]).reset_index(drop=True)
         df_display.index += 1
