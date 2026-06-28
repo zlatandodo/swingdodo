@@ -473,10 +473,10 @@ def fetch_market_pulse():
             pass
     return results
 
-_YF_TO_GICS = {
+_FINVIZ_TO_GICS_STOCK = {
     "Technology":             "Information Technology",
     "Healthcare":             "Health Care",
-    "Financial Services":     "Financials",
+    "Financial":              "Financials",
     "Consumer Cyclical":      "Consumer Discretionary",
     "Consumer Defensive":     "Consumer Staples",
     "Basic Materials":        "Materials",
@@ -489,16 +489,19 @@ _YF_TO_GICS = {
 
 @st.cache_data(show_spinner=False, ttl=86400)
 def fetch_sectors_bulk(tickers: tuple) -> dict:
-    """Restituisce {ticker: sector_gics} per i ticker passati, via yfinance individuale."""
-    result = {}
-    for sym in tickers:
-        try:
-            raw = yf.Ticker(sym).info.get("sector") or ""
-            result[sym] = _YF_TO_GICS.get(raw, raw)
-        except Exception:
-            result[sym] = ""
-        time.sleep(0.15)
-    return result
+    """Restituisce {ticker: sector_gics} per i ticker passati, via Finviz screener (bulk)."""
+    try:
+        from finvizfinance.screener.overview import Overview
+        f = Overview()
+        f.set_filter()
+        df = f.screener_view(verbose=0)
+        mapping = {
+            row["Ticker"]: _FINVIZ_TO_GICS_STOCK.get(row["Sector"], row["Sector"])
+            for _, row in df.iterrows()
+        }
+        return {sym: mapping.get(sym, "") for sym in tickers}
+    except Exception:
+        return {sym: "" for sym in tickers}
 
 @st.cache_data(show_spinner=False, ttl=3600)
 def fetch_sector_rank(w1d=0.10, w1w=0.35, w1m=0.35, w3m=0.20, group="Sector"):
