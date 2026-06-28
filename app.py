@@ -473,6 +473,22 @@ def fetch_market_pulse():
             pass
     return results
 
+@st.cache_data(show_spinner=False, ttl=86400)
+def fetch_sectors_bulk(tickers: tuple) -> dict:
+    """Restituisce {ticker: sector_gics} per i ticker passati, via yfinance."""
+    result = {}
+    try:
+        tickers_obj = yf.Tickers(" ".join(tickers))
+        for sym in tickers:
+            try:
+                info = tickers_obj.tickers[sym].info
+                result[sym] = info.get("sector") or ""
+            except Exception:
+                result[sym] = ""
+    except Exception:
+        pass
+    return result
+
 @st.cache_data(show_spinner=False, ttl=3600)
 def fetch_sector_rank(w1d=0.10, w1w=0.35, w1m=0.35, w3m=0.20, group="Sector"):
     try:
@@ -575,6 +591,18 @@ def load_data(email, password):
     scanner_results = {}
     for sid in SCANNERS:
         scanner_results[sid] = fetch_scanner(session, sid)
+
+    # arricchisci i sector=None con yfinance
+    missing = tuple({
+        m["ticker"] for matches in scanner_results.values()
+        for m in matches if not m.get("sector")
+    })
+    if missing:
+        yf_sectors = fetch_sectors_bulk(missing)
+        for matches in scanner_results.values():
+            for m in matches:
+                if not m.get("sector") and m["ticker"] in yf_sectors:
+                    m["sector"] = yf_sectors[m["ticker"]]
 
     return records, scanner_results
 
