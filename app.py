@@ -641,18 +641,17 @@ def build_crossref(records, scanner_results, sel_theme_ids, sel_scanner_ids):
                 ticker_meta[tk] = m
 
     rows = []
-    for tk, themes in ticker_themes.items():
-        if tk not in ticker_scanners:
-            continue
-        meta = ticker_meta[tk]
-        tv   = meta.get("tv_symbol", "") or tk
-        best = min(themes, key=lambda x: x["rank"])
+    for tk, scanners in ticker_scanners.items():
+        meta   = ticker_meta[tk]
+        tv     = meta.get("tv_symbol", "") or tk
+        themes = ticker_themes.get(tk, [])
+        best   = min(themes, key=lambda x: x["rank"]) if themes else {"rank": 999, "theme": "—"}
         mktcap = meta.get("market_cap") or meta.get("mktcap") or 0
         volume = meta.get("volume") or meta.get("avg_vol_50") or 0
         rows.append({
             "Ticker":       f"https://www.tradingview.com/chart/?symbol={tv}",
             "Nome":         (meta.get("name") or "")[:28],
-            "N.Scanner":    len(ticker_scanners[tk]),
+            "N.Scanner":    len(scanners),
             "Rank Tema":    best["rank"],
             "N.Temi":       len(themes),
             "TA":           round(meta.get("ta_rating") or 0, 1),
@@ -662,7 +661,7 @@ def build_crossref(records, scanner_results, sel_theme_ids, sel_scanner_ids):
             "1D %":         round(meta.get("change_pct") or 0, 2),
             "Mkt Cap $M":   round(mktcap / 1e6, 0) if mktcap else 0,
             "Vol 50d":      round(volume / 1e6, 2) if volume else 0,
-            "Scanner":      ", ".join(ticker_scanners[tk]),
+            "Scanner":      ", ".join(scanners),
             "Top Tema":     f"#{best['rank']} {best['theme'][:28]}",
             "_ticker":      tk,
             "_sector":      meta.get("sector", ""),
@@ -968,18 +967,20 @@ with tab_config:
 # TAB 3 — CROSS-REFERENCE
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_cross:
-    sel_theme_ids   = {r["id"] for r in records if r["Tema"] in st.session_state.get("sel_themes", [])}
+    sel_theme_names = set(st.session_state.get("sel_themes", []))
     sel_scanner_ids = set(st.session_state.get("sel_scanners", ["pullback-21ema", "livermore-buy-the-dip"]))
-    if not sel_theme_ids:
-        sel_theme_ids = {r["id"] for r in records[:30]}
     if not sel_scanner_ids:
         sel_scanner_ids = set(["pullback-21ema", "livermore-buy-the-dip"])
 
-    # se il filtro temi è disattivato, usa tutti i temi
-    _use_themes = st.session_state.get("use_theme_filter", False)
-    _active_theme_ids = sel_theme_ids if _use_themes else {r["id"] for r in records}
+    # temi validi per il filtro (se attivo)
+    sel_theme_ids = {r["id"] for r in records if r["Tema"] in sel_theme_names}
+    if not sel_theme_ids:
+        sel_theme_ids = {r["id"] for r in records[:30]}
+    # ticker che compaiono in almeno uno dei temi selezionati
+    _theme_tickers = {tk for r in records if r["id"] in sel_theme_ids for tk in r["stocks"]}
 
-    crossref = build_crossref(records, scanner_results, _active_theme_ids, sel_scanner_ids)
+    # build_crossref parte SEMPRE da tutti gli scanner senza filtro tema
+    crossref = build_crossref(records, scanner_results, set(), sel_scanner_ids)
     df_c = pd.DataFrame(crossref) if crossref else pd.DataFrame()
 
     if df_c.empty:
@@ -1112,6 +1113,8 @@ with tab_cross:
             df_c = df_c[df_c["Scanner"].apply(
                 lambda s: any(m in s for m in must_names)
             )]
+        if use_theme_filter:
+            df_c = df_c[df_c["_ticker"].isin(_theme_tickers)]
         if use_sector_filter and sel_sectors:
             df_c = df_c[df_c["_sector"].isin(sel_sectors)]
         df_display = df_c.drop(columns=["_ticker", "_sector"]).reset_index(drop=True)
