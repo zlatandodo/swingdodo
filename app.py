@@ -508,6 +508,22 @@ def fetch_sector_rank(w1d=0.10, w1w=0.35, w1m=0.35, w3m=0.20, group="Sector"):
             df.get("Perf Month", z).fillna(0) * w1m +
             df.get("Perf Quart", z).fillna(0) * w3m
         )
+        # mappa nomi Finviz → nomi AskLivermore (GICS standard)
+        FINVIZ_TO_GICS = {
+            "Basic Materials":        "Materials",
+            "Communication Services": "Communication Services",
+            "Consumer Cyclical":      "Consumer Discretionary",
+            "Consumer Defensive":     "Consumer Staples",
+            "Energy":                 "Energy",
+            "Financial":              "Financials",
+            "Healthcare":             "Health Care",
+            "Industrials":            "Industrials",
+            "Real Estate":            "Real Estate",
+            "Technology":             "Information Technology",
+            "Utilities":              "Utilities",
+        }
+        df["Name"] = df["Name"].map(lambda n: FINVIZ_TO_GICS.get(n, n))
+
         df = df.sort_values("score", ascending=False)
         return [{
             "sector":  r["Name"],
