@@ -15,7 +15,7 @@ from scipy.stats import norm
 SUPABASE_URL      = "https://dwihwpjhzssmssdewzof.supabase.co"
 SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR3aWh3cGpoenNzbXNzZGV3em9mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNjU4OTMsImV4cCI6MjA5Mjc0MTg5M30.1PrjsczV70qNSssx4gTM_SXYUw1s7IfmI3ZeR6l6jtM"
 SITE_URL          = "https://www.asklivermore.com"
-WEIGHTS           = {"1d": 0.10, "1w": 0.25, "1m": 0.40, "3m": 0.25}
+WEIGHTS           = {"1d": 0.10, "1w": 0.35, "1m": 0.30, "3m": 0.25}
 
 SCANNERS = {
     "trend-template":             "Trend Template | Mark Minervini",
@@ -596,8 +596,8 @@ with st.spinner("⏳ Caricamento dati da AskLivermore..."):
 
 # ricalcola score con pesi custom se impostati
 _w1d = st.session_state.get("w_1d", 10)
-_w1w = st.session_state.get("w_1w", 25)
-_w1m = st.session_state.get("w_1m", 40)
+_w1w = st.session_state.get("w_1w", 35)
+_w1m = st.session_state.get("w_1m", 30)
 _w3m = st.session_state.get("w_3m", 25)
 if _w1d + _w1w + _w1m + _w3m == 100:
     _custom_w = {"1d": _w1d/100, "1w": _w1w/100, "1m": _w1m/100, "3m": _w3m/100}
@@ -701,8 +701,8 @@ with tab_themes:
         return "font-weight:600"
 
     _w1d = st.session_state.get("w_1d", 10)
-    _w1w = st.session_state.get("w_1w", 25)
-    _w1m = st.session_state.get("w_1m", 40)
+    _w1w = st.session_state.get("w_1w", 35)
+    _w1m = st.session_state.get("w_1m", 30)
     _w3m = st.session_state.get("w_3m", 25)
     st.caption(f"{len(df_t)} temi · Ponderazione: 1D={_w1d}% | 1W={_w1w}% | 1M={_w1m}% | 3M={_w3m}%")
 
@@ -849,8 +849,8 @@ with tab_config:
     st.caption("La somma deve essere 100%. Lo score ordina i temi nel grafico e nel cross-reference.")
     wc1, wc2, wc3, wc4 = st.columns(4)
     w1d = wc1.slider("1 Day %",   0, 100, st.session_state.get("w_1d", 10), 5, key="w_1d")
-    w1w = wc2.slider("1 Week %",  0, 100, st.session_state.get("w_1w", 25), 5, key="w_1w")
-    w1m = wc3.slider("1 Month %", 0, 100, st.session_state.get("w_1m", 40), 5, key="w_1m")
+    w1w = wc2.slider("1 Week %",  0, 100, st.session_state.get("w_1w", 35), 5, key="w_1w")
+    w1m = wc3.slider("1 Month %", 0, 100, st.session_state.get("w_1m", 30), 5, key="w_1m")
     w3m = wc4.slider("3 Month %", 0, 100, st.session_state.get("w_3m", 25), 5, key="w_3m")
     w_total = w1d + w1w + w1m + w3m
     if w_total != 100:
@@ -924,10 +924,11 @@ with tab_cross:
         with g3:
             chart_h = st.select_slider("Altezza grafici", [300, 380, 460], value=380, key="chart_h")
 
+        _must_default = ["trend-template"] if "trend-template" in sel_scanner_ids else []
         must_sc = st.multiselect(
             "🔒 Deve comparire in (lascia vuoto = nessun vincolo)",
             options=list(sel_scanner_ids),
-            default=[],
+            default=st.session_state.get("must_sc", _must_default),
             format_func=lambda k: SCANNERS[k],
             key="must_sc",
         )
