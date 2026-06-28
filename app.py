@@ -473,20 +473,31 @@ def fetch_market_pulse():
             pass
     return results
 
+_YF_TO_GICS = {
+    "Technology":             "Information Technology",
+    "Healthcare":             "Health Care",
+    "Financial Services":     "Financials",
+    "Consumer Cyclical":      "Consumer Discretionary",
+    "Consumer Defensive":     "Consumer Staples",
+    "Basic Materials":        "Materials",
+    "Communication Services": "Communication Services",
+    "Energy":                 "Energy",
+    "Real Estate":            "Real Estate",
+    "Utilities":              "Utilities",
+    "Industrials":            "Industrials",
+}
+
 @st.cache_data(show_spinner=False, ttl=86400)
 def fetch_sectors_bulk(tickers: tuple) -> dict:
-    """Restituisce {ticker: sector_gics} per i ticker passati, via yfinance."""
+    """Restituisce {ticker: sector_gics} per i ticker passati, via yfinance individuale."""
     result = {}
-    try:
-        tickers_obj = yf.Tickers(" ".join(tickers))
-        for sym in tickers:
-            try:
-                info = tickers_obj.tickers[sym].info
-                result[sym] = info.get("sector") or ""
-            except Exception:
-                result[sym] = ""
-    except Exception:
-        pass
+    for sym in tickers:
+        try:
+            raw = yf.Ticker(sym).info.get("sector") or ""
+            result[sym] = _YF_TO_GICS.get(raw, raw)
+        except Exception:
+            result[sym] = ""
+        time.sleep(0.15)
     return result
 
 @st.cache_data(show_spinner=False, ttl=3600)
