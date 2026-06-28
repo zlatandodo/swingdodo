@@ -813,10 +813,11 @@ with tab_config:
 
     st.markdown("---")
     st.markdown("### 🔍 Selezione Scanner")
+    DEFAULT_SCANNERS = ["pullback-21ema", "trend-template", "livermore-buy-the-dip"]
     sel_sc = st.multiselect(
         "Scanner attivi",
         list(SCANNERS.keys()),
-        default=list(SCANNERS.keys()),
+        default=DEFAULT_SCANNERS,
         format_func=lambda k: f"{SCANNERS[k]}  ({len(scanner_results.get(k,[]))} titoli)",
         key="sel_scanners",
     )
@@ -829,11 +830,11 @@ with tab_config:
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_cross:
     sel_theme_ids   = {r["id"] for r in records if r["Tema"] in st.session_state.get("sel_themes", [])}
-    sel_scanner_ids = set(st.session_state.get("sel_scanners", list(SCANNERS.keys())))
+    sel_scanner_ids = set(st.session_state.get("sel_scanners", ["pullback-21ema", "trend-template", "livermore-buy-the-dip"]))
     if not sel_theme_ids:
         sel_theme_ids = {r["id"] for r in records[:30]}
     if not sel_scanner_ids:
-        sel_scanner_ids = set(SCANNERS.keys())
+        sel_scanner_ids = set(["pullback-21ema", "trend-template", "livermore-buy-the-dip"])
 
     crossref = build_crossref(records, scanner_results, sel_theme_ids, sel_scanner_ids)
     df_c = pd.DataFrame(crossref) if crossref else pd.DataFrame()
