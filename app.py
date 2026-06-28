@@ -18,18 +18,20 @@ SITE_URL          = "https://www.asklivermore.com"
 WEIGHTS           = {"1d": 0.10, "1w": 0.25, "1m": 0.40, "3m": 0.25}
 
 SCANNERS = {
-    "bull-flag":              "Bull Flag",
-    "golden-pocket":          "Golden Pocket",
-    "vcp":                    "VCP | Minervini",
-    "ascending-triangle":     "Ascending Triangle",
-    "pocket-pivot":           "Pocket Pivot",
-    "peg-flag":               "PEG Flag",
-    "insider-buying":         "Insider Buying",
-    "volume-surge":           "Volume Surge",
-    "inverse-head-shoulders": "Inv. H&S",
-    "rsi-oversold":           "RSI Oversold",
-    "livermore-pivotal":      "Livermore Pivotal",
-    "livermore-buy-the-dip":  "Buy the Dip",
+    "bull-flag":                  "Bull Flag",
+    "vcp":                        "VCP | Minervini",
+    "pocket-pivot":               "Pocket Pivot",
+    "episodic-pivot":             "Episodic Pivot",
+    "qualmaggie-episodic-pivot":  "Qualmaggie EP",
+    "pullback-to-21-ema":         "Pullback 21 EMA",
+    "golden-pocket":              "Golden Pocket",
+    "ascending-triangle":         "Ascending Triangle",
+    "peg-flag":                   "PEG Flag",
+    "insider-buying":             "Insider Buying",
+    "volume-surge":               "Volume Surge",
+    "inverse-head-shoulders":     "Inv. H&S",
+    "livermore-pivotal":          "Livermore Pivotal",
+    "livermore-buy-the-dip":      "Buy the Dip",
 }
 
 CROWD_COLORS = {
@@ -41,7 +43,7 @@ CROWD_COLORS = {
 
 # ── PAGE SETUP ────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Dodo Swing Scanner",
+    page_title="Dodo Livermore",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -565,7 +567,7 @@ def build_crossref(records, scanner_results, sel_theme_ids, sel_scanner_ids):
 
 # ── SIDEBAR ────────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("## 📊 Dodo Swing Scanner")
+    st.markdown("## 📊 Dodo Livermore")
     st.markdown("---")
     try:
         email    = st.secrets["ASKLIVERMORE_EMAIL"]
@@ -596,7 +598,7 @@ st.markdown(
     f"<div style='margin-top:18px;margin-bottom:4px;display:flex;align-items:center;gap:14px'>"
     f"<span style='font-size:48px;line-height:1'>🦤</span>"
     f"<div>"
-    f"<div style='font-size:26px;font-weight:800;color:#f1f5f9;letter-spacing:-0.5px'>Dodo Swing Scanner</div>"
+    f"<div style='font-size:26px;font-weight:800;color:#f1f5f9;letter-spacing:-0.5px'>Dodo Livermore</div>"
     f"<div style='font-size:12px;color:#64748b;margin-top:2px'>Dati al {as_of}</div>"
     f"</div>"
     f"</div>",
@@ -658,11 +660,10 @@ if pulse:
     st.markdown("<br>", unsafe_allow_html=True)
 
 # ── TABS ───────────────────────────────────────────────────────────────────────
-tab_themes, tab_chart, tab_cross, tab_gex, tab_config = st.tabs([
+tab_themes, tab_chart, tab_cross, tab_config = st.tabs([
     "📈 Theme Momentum",
     "📊 Grafico Temi",
     "🎯 Cross-Reference",
-    "📐 GEX Map",
     "⚙️ Configura",
 ])
 
@@ -788,289 +789,6 @@ with tab_chart:
         height=380,
     )
     st.plotly_chart(fig_hm, use_container_width=True)
-
-# ══════════════════════════════════════════════════════════════════════════════
-# TAB 4 — GEX MAP
-# ══════════════════════════════════════════════════════════════════════════════
-with tab_gex:
-    with st.expander("📖 Come leggere la GEX Map — guida e affidabilità", expanded=False):
-        st.markdown("""
-**Cos'è il GEX (Gamma Exposure)?**
-I market maker che vendono opzioni devono coprirsi comprando/vendendo il sottostante man mano che il prezzo si muove. Il GEX misura *quanto* devono coprire per ogni punto di movimento: più è alto, più il loro hedging influenza il prezzo.
-
----
-
-**Come leggere la heatmap:**
-
-| Elemento | Significato |
-|---|---|
-| 🟩 **Cella verde** | GEX positivo: dealer long gamma → comprano quando il prezzo scende, vendono quando sale → **effetto magnete/frenante** |
-| 🟥 **Cella rossa** | GEX negativo: dealer short gamma → vendono quando il prezzo scende, comprano quando sale → **effetto amplificatore** |
-| **Intensità colore** | Più saturo = più GEX in quel nodo. Le celle più accese sono i livelli chiave |
-| ◀ **Riga spot** | Prezzo attuale del titolo (bordo blu) |
-| ⚡ **Gamma Flip** | Strike dove il GEX totale cambia segno. **Sopra il flip = regime stabilizzante, sotto = regime volatile** |
-| **Call Wall** | Strike con il massimo OI call — resistenza magnetica verso l'alto |
-| **Put Wall** | Strike con il massimo OI put — supporto magnetico verso il basso |
-| **Colonne** | Ogni colonna = una scadenza. Le scadenze più vicine (colonne sx) pesano di più sul GEX corrente |
-
----
-
-**Come usarla nel trading:**
-
-1. **Identifica il regime**: se spot > gamma flip → il mercato si muove lentamente, i breakout faticano. Se spot < gamma flip → volatilità alta, i movimenti si amplificano
-2. **Call Wall = resistenza naturale**: il prezzo tende a frenare lì prima delle scadenze, poi può romperla dopo
-3. **Put Wall = supporto naturale**: zona dove i dealer comprano aggressivamente — utile come target di stop o area di rimbalzo
-4. **Nodi rossi intensi vicino allo spot**: zone di accelerazione se il prezzo ci passa sopra/sotto
-5. **Scadenze vicine contano di più**: un muro grosso sulla scadenza settimanale è più rilevante di uno mensile
-
----
-
-**⚠️ Limiti di questa implementazione:**
-
-- **OI aggiornato una volta al giorno** da Yahoo Finance — il GEX intraday non è catturato
-- **Affidabile su titoli liquidi** con alto OI (SPY, QQQ, NVDA, AAPL, TSLA, MSFT). Su small cap con poche opzioni il segnale è rumore
-- **Non include dealer positioning reale** — servizi come Bullflow usano dati proprietari sui flussi, non solo OI
-- **Gamma calcolato su IV snapshot** — cambia durante il giorno con il movimento del prezzo
-
-**Usala come mappa strutturale** (dove sono i muri chiave, sopra/sotto il flip), non come segnale preciso al tick.
-        """)
-
-    st.markdown(
-        "<div style='background:#1a1d27;border:1px solid #2a2d3a;border-radius:8px;"
-        "padding:8px 16px;margin-bottom:12px;font-size:12px;color:#64748b'>"
-        "📐 <strong style='color:#94a3b8'>GEX Map</strong> — "
-        "<span style='color:#22c55e'>■ verde</span> = dealer long γ (frenante) &nbsp;·&nbsp; "
-        "<span style='color:#ef4444'>■ rosso</span> = dealer short γ (amplificante) &nbsp;·&nbsp; "
-        "<span style='color:#f97316'>⚡ flip</span> = cambio regime &nbsp;·&nbsp; "
-        "OI da Yahoo Finance · Black-Scholes · snapshot giornaliero"
-        "</div>",
-        unsafe_allow_html=True,
-    )
-
-    gex_col1, gex_col2 = st.columns([1, 3])
-    with gex_col1:
-        # suggerisci ticker dal crossref se disponibile
-        crossref_tickers = []
-        _th_ids = {r["id"] for r in records[:30]}
-        _sc_ids = set(SCANNERS.keys())
-        _cr = build_crossref(records, scanner_results, _th_ids, _sc_ids)
-        if _cr:
-            crossref_tickers = [
-                row["Ticker"].split("symbol=")[-1].split(":")[-1]
-                for row in _cr[:40]
-            ]
-        gex_input = st.text_input(
-            "Ticker (es. NVDA, AAPL, TSLA)",
-            value=crossref_tickers[0] if crossref_tickers else "NVDA",
-            key="gex_ticker",
-        )
-        if crossref_tickers:
-            st.caption("Suggeriti dal cross-reference:")
-            quick_picks = st.selectbox(
-                "Scegli rapido",
-                ["—"] + crossref_tickers[:20],
-                key="gex_quick",
-            )
-            if quick_picks != "—":
-                gex_input = quick_picks
-
-        # carica scadenze disponibili appena cambia il ticker
-        avail_exps = fetch_expirations(gex_input) if gex_input else []
-        if avail_exps:
-            default_exps = avail_exps[:6]
-            sel_exps = st.multiselect(
-                "Scadenze",
-                options=avail_exps,
-                default=default_exps,
-                key="gex_exps",
-            )
-        else:
-            sel_exps = []
-            st.caption("Carica le scadenze premendo Calcola GEX")
-
-        load_gex = st.button("📐 Calcola GEX", type="primary", use_container_width=True)
-
-    with gex_col2:
-        if load_gex or st.session_state.get("gex_last") == (gex_input, tuple(sel_exps)):
-            st.session_state["gex_last"] = (gex_input, tuple(sel_exps))
-            with st.spinner(f"Calcolo GEX per {gex_input} ({len(sel_exps)} scadenze)..."):
-                gdata = fetch_gex(gex_input, tuple(sel_exps))
-
-            if "_error" in gdata:
-                st.error(f"Errore: {gdata['_error']}")
-            else:
-                spot        = gdata["spot"]
-                matrix      = gdata["matrix"]
-                all_strikes = gdata["all_strikes"]   # sorted desc
-                net_gex     = gdata["net_gex"]
-                flip_strike = gdata["flip_strike"]
-                call_wall   = gdata["call_wall"]
-                put_wall    = gdata["put_wall"]
-                used_exps   = gdata["expirations"]
-
-                net_color = "#22c55e" if net_gex >= 0 else "#ef4444"
-
-                # ── HEADER METRICHE ──────────────────────────────────────────
-                hm1, hm2, hm3, hm4, hm5 = st.columns(5)
-                hm1.markdown(f"<div class='metric-card'><div class='val' style='font-size:22px'>${spot:.2f}</div><div class='lbl'>Spot</div></div>", unsafe_allow_html=True)
-                hm2.markdown(f"<div class='metric-card'><div class='val' style='color:{net_color};font-size:18px'>{'▲' if net_gex>=0 else '▼'} ${net_gex/1e9:.2f}B</div><div class='lbl'>Total Net GEX</div></div>", unsafe_allow_html=True)
-                hm3.markdown(f"<div class='metric-card'><div class='val' style='color:#f97316;font-size:18px'>${flip_strike or '—'}</div><div class='lbl'>Gamma Flip</div></div>", unsafe_allow_html=True)
-                hm4.markdown(f"<div class='metric-card'><div class='val' style='color:#22c55e;font-size:18px'>${call_wall or '—'}</div><div class='lbl'>Max +GEX (Call Wall)</div></div>", unsafe_allow_html=True)
-                hm5.markdown(f"<div class='metric-card'><div class='val' style='color:#ef4444;font-size:18px'>${put_wall or '—'}</div><div class='lbl'>Max -GEX (Put Wall)</div></div>", unsafe_allow_html=True)
-
-                st.markdown("<br>", unsafe_allow_html=True)
-
-                # ── GEX HEATMAP (stile Bullflow) ─────────────────────────────
-                # calcola max abs per normalizzare l'intensità del colore
-                all_vals = [matrix[exp].get(k, 0) for exp in used_exps for k in all_strikes]
-                max_abs  = max((abs(v) for v in all_vals if v != 0), default=1)
-
-                def cell_style(val):
-                    if val == 0:
-                        return "background:#111827;color:#374151;"
-                    intensity = min(abs(val) / max_abs, 1.0)
-                    alpha = 0.15 + intensity * 0.75
-                    if val > 0:
-                        r, g, b = 34, 197, 94
-                    else:
-                        r, g, b = 239, 68, 68
-                    txt = "#ffffff" if intensity > 0.35 else "#94a3b8"
-                    return f"background:rgba({r},{g},{b},{alpha:.2f});color:{txt};"
-
-                def fmt_val(val):
-                    if val == 0:
-                        return ""
-                    m = val / 1e6
-                    if abs(m) >= 1000:
-                        return f"{m/1000:.1f}B"
-                    elif abs(m) >= 1:
-                        return f"{m:.1f}M"
-                    else:
-                        return f"{val/1e3:.0f}K"
-
-                # short column headers: "Jun 20", "Dec 19"
-                col_labels = []
-                for exp in used_exps:
-                    try:
-                        col_labels.append(pd.Timestamp(exp).strftime("%b %d"))
-                    except Exception:
-                        col_labels.append(exp)
-
-                # trova strike più vicino allo spot per highlight
-                spot_row = min(all_strikes, key=lambda k: abs(k - spot)) if all_strikes else None
-
-                # costruisci tabella HTML
-                th_style = "padding:6px 10px;text-align:center;font-size:11px;font-weight:700;color:#94a3b8;border-bottom:1px solid #1f2937;white-space:nowrap;background:#0f1117;"
-                td_strike_base = "padding:5px 10px;text-align:right;font-size:11px;font-weight:700;white-space:nowrap;border-right:2px solid #1f2937;"
-                td_cell_base   = "padding:5px 8px;text-align:right;font-size:11px;font-family:monospace;white-space:nowrap;min-width:70px;"
-
-                rows_html = ""
-                for k in all_strikes:
-                    is_spot_row  = (k == spot_row)
-                    is_flip_row  = (flip_strike and k == flip_strike)
-                    is_call_wall = (call_wall and k == call_wall)
-                    is_put_wall  = (put_wall and k == put_wall)
-
-                    if is_spot_row:
-                        strike_style = td_strike_base + "color:#ffffff;background:#1e3a5f;border-top:2px solid #3b82f6;border-bottom:2px solid #3b82f6;"
-                        row_border   = "border-top:2px solid #3b82f6;border-bottom:2px solid #3b82f6;"
-                    elif is_flip_row:
-                        strike_style = td_strike_base + "color:#f97316;background:#1a1207;"
-                        row_border   = "border-top:1px dashed #f97316;"
-                    elif is_call_wall:
-                        strike_style = td_strike_base + "color:#22c55e;"
-                        row_border   = ""
-                    elif is_put_wall:
-                        strike_style = td_strike_base + "color:#ef4444;"
-                        row_border   = ""
-                    else:
-                        strike_style = td_strike_base + "color:#94a3b8;"
-                        row_border   = ""
-
-                    label_suffix = ""
-                    if is_spot_row:   label_suffix = " ◀"
-                    elif is_flip_row: label_suffix = " ⚡"
-
-                    cells = f"<td style='{strike_style}'>${k:.0f}{label_suffix}</td>"
-                    for exp in used_exps:
-                        val = matrix[exp].get(k, 0)
-                        cs  = cell_style(val) + row_border
-                        cells += f"<td style='{td_cell_base}{cs}'>{fmt_val(val)}</td>"
-
-                    rows_html += f"<tr>{cells}</tr>"
-
-                header_cells = f"<th style='{th_style}'>Strike</th>"
-                for lbl in col_labels:
-                    header_cells += f"<th style='{th_style}'>{lbl}</th>"
-
-                table_html = f"""
-                <div style='overflow-x:auto;overflow-y:auto;max-height:620px;border:1px solid #1f2937;border-radius:8px;'>
-                <table style='border-collapse:collapse;width:100%;'>
-                  <thead style='position:sticky;top:0;z-index:10;'>
-                    <tr>{header_cells}</tr>
-                  </thead>
-                  <tbody>{rows_html}</tbody>
-                </table>
-                </div>
-                <div style='margin-top:8px;font-size:11px;color:#4b5563;'>
-                  ◀ spot &nbsp;·&nbsp; ⚡ gamma flip &nbsp;·&nbsp;
-                  <span style='color:#22c55e'>■</span> long γ (dealer compra se scende) &nbsp;·&nbsp;
-                  <span style='color:#ef4444'>■</span> short γ (dealer vende se scende) &nbsp;·&nbsp;
-                  Black-Scholes · Yahoo Finance · aggiornato ogni ora
-                </div>
-                """
-
-                components.html(table_html, height=680, scrolling=True)
-
-                # ── UNUSUAL FLOW ─────────────────────────────────────────────
-                st.markdown("### 🔥 Unusual Options Flow")
-                st.caption("Strike con Volume/OI > 3× sulle prime 4 scadenze — possibile attività istituzionale")
-                with st.spinner("Analisi flow opzioni..."):
-                    uflow = fetch_unusual_flow(gex_input)
-                if uflow:
-                    df_uf = pd.DataFrame(uflow)
-                    def color_tipo(val):
-                        return "color:#22c55e;font-weight:700" if val == "CALL" else "color:#ef4444;font-weight:700"
-                    def color_ratio(val):
-                        if val >= 10: return "color:#f97316;font-weight:800"
-                        if val >= 5:  return "color:#eab308;font-weight:700"
-                        return ""
-                    styled_uf = (df_uf.style
-                        .map(color_tipo, subset=["Tipo"])
-                        .map(color_ratio, subset=["Vol/OI"])
-                        .format({"Strike": "${:.0f}", "OTM %": "{:.1f}%", "IV %": "{:.0f}%",
-                                 "Volume": "{:,.0f}", "OI": "{:,.0f}", "Vol/OI": "{:.1f}×"})
-                        .background_gradient(subset=["Vol/OI"], cmap="Oranges")
-                    )
-                    st.dataframe(styled_uf, use_container_width=True, hide_index=True)
-                else:
-                    st.info("Nessun flow insolito rilevato (Volume/OI < 3× o dati insufficienti)")
-
-                # ── INSIDER BUYING ───────────────────────────────────────────
-                st.markdown("### 🏦 Insider Buying (SEC Form 4 — ultimi 90 giorni)")
-                with st.spinner("Parsing Form 4 da SEC EDGAR..."):
-                    ins = fetch_insider_buys(gex_input)
-                if ins:
-                    df_ins = pd.DataFrame(ins)
-                    df_ins["Valore $"] = df_ins["value"].apply(
-                        lambda v: f"${v/1e6:.2f}M" if v >= 1e6 else f"${v/1e3:.0f}K"
-                    )
-                    df_ins["Azioni"]   = df_ins["shares"].apply(lambda x: f"{x:,}")
-                    df_ins["Filing"]   = df_ins["url"].apply(
-                        lambda u: f'<a href="{u}" target="_blank" style="color:#f97316">→ SEC</a>'
-                    )
-                    display_ins = df_ins[["date","filer","role","Azioni","Valore $","Filing"]].rename(columns={
-                        "date": "Data", "filer": "Insider", "role": "Ruolo"
-                    })
-                    st.write(display_ins.to_html(escape=False, index=False,
-                        table_attributes='style="width:100%;border-collapse:collapse;font-size:12px"'),
-                        unsafe_allow_html=True)
-                    st.caption(f"{len(ins)} acquisti trovati · solo transazioni con codice A (Acquired) · esclude stock grant a $0")
-                else:
-                    st.info("Nessun acquisto insider trovato negli ultimi 90 giorni (solo vendite o nessun Form 4)")
-
-        else:
-            st.info("👈 Inserisci un ticker e clicca **Calcola GEX**")
 
 # ══════════════════════════════════════════════════════════════════════════════
 # TAB 5 — CONFIG
