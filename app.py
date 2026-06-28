@@ -18,12 +18,12 @@ SITE_URL          = "https://www.asklivermore.com"
 WEIGHTS           = {"1d": 0.10, "1w": 0.25, "1m": 0.40, "3m": 0.25}
 
 SCANNERS = {
-    "bull-flag":                  "Bull Flag",
+    "trend-template":             "Trend Template",
     "vcp":                        "VCP | Minervini",
+    "bull-flag":                  "Bull Flag",
     "pocket-pivot":               "Pocket Pivot",
     "episodic-pivot":             "Episodic Pivot",
     "qualmaggie-episodic-pivot":  "Qualmaggie EP",
-    "pullback-to-21-ema":         "Pullback 21 EMA",
     "golden-pocket":              "Golden Pocket",
     "ascending-triangle":         "Ascending Triangle",
     "peg-flag":                   "PEG Flag",
