@@ -1014,16 +1014,17 @@ with tab_cross:
                         if v > 0: return "color:#22c55e;font-weight:600"
                         if v < 0: return "color:#ef4444;font-weight:600"
                     return ""
-                # evidenzia i settori selezionati
-                def _highlight_sel(row):
-                    if row["sector"] in sel_sectors:
-                        return ["background-color:#f9731622"] * len(row)
-                    return [""] * len(row)
-                styled_sec = (df_sec.rename(columns={
+                df_sec_renamed = df_sec.rename(columns={
                     "sector":"Settore","perf_1d":"1D","perf_1w":"1W",
                     "perf_1m":"1M","perf_3m":"3M","score":"Score"
-                }).style
-                    .apply(_highlight_sel, axis=1, subset=None)
+                })
+                # evidenzia i settori selezionati
+                def _highlight_sel(row):
+                    if row["Settore"] in sel_sectors:
+                        return ["background-color:#f9731622"] * len(row)
+                    return [""] * len(row)
+                styled_sec = (df_sec_renamed.style
+                    .apply(_highlight_sel, axis=1)
                     .map(_sec_color, subset=["1D","1W","1M","3M","Score"])
                     .format({"1D":_pct,"1W":_pct,"1M":_pct,"3M":_pct,"Score":"{:.4f}"}))
                 st.dataframe(styled_sec, use_container_width=True, height=280, hide_index=True)
